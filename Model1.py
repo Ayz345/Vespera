@@ -91,4 +91,21 @@ def model1(df,dataset_type,model_choice):
             model = XGBClassifier(random_state=42, use_label_encoder=False, eval_metric="logloss")
         else:
             model = LogisticRegression(random_state=42, max_iter=1000)
+        model.fit(Xtrain_s, ytrain)
+        ypred = model.predict(Xtest_s)
+        accuracy = accuracy_score(ytest, ypred)
+        confmatrix = confusion_matrix(ytest, ypred)
+        classreport = classification_report(ytest, ypred)
+        coefs = model.coef_[0] if hasattr(model, "coef_") else []
+        dfcandidates2 = dfcandidates.drop(columns=[id_col], errors='ignore')
+        Xcand_s = scaler.transform(dfcandidates2)
+        ycand_pred = model.predict(Xcand_s)
+        ycand_predproba = model.predict_proba(Xcand_s)[:, 1]  
+        dfcandidateswproba = dfcandidates.copy()
+        dfcandidates[label_col] = ycand_pred
+        dfcandidateswproba[label_col] =ycand_predproba
+        results_df = pd.concat([dfcandidateposition, dfcandidates[[id_col,label_col]]], axis=1)
+        results_dfwProba= pd.concat([dfcandidateposition,dfcandidateswproba[[id_col,label_col]]],axis=1)
+        return results_df, accuracy, confmatrix, classreport, coefs, feature_cols, dfconfirmedfor3d, results_dfwProba
+    
 
