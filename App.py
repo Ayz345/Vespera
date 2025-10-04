@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 from xgboost import XGBClassifier
 from flask import Flask, render_template, request, send_from_directory
 import os
+import json
 UPLOAD_FOLDER = 'uploads'
 RESULT_FOLDER = 'results'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -66,7 +67,7 @@ def model1(df,dataset_type,model_choice):
             label_col = "disposition"
             id_col = "pl_name"
             feature_cols = ['pl_orbper','sy_dist','sy_vmag','sy_kmag','sy_gaiamag']
-            position_cols = ['ra','dec','sy_dist']
+            posandhab_cols = ['ra','dec','sy_dist','habitable_prediction']
             pos_label = "CONFIRMED"
             neg_label = "FALSE POSITIVE"
             candidate_label = "CANDIDATE"
@@ -75,7 +76,7 @@ def model1(df,dataset_type,model_choice):
             label_col = "koi_disposition"
             id_col = "kepid"
             feature_cols = ['koi_period','koi_impact','koi_duration','koi_depth','koi_prad','koi_teq','koi_slogg','koi_srad']
-            position_cols = ['ra','dec','koi_dist']
+            posandhab_cols = ['ra','dec','koi_dist','habitable_prediction']
             pos_label = "CONFIRMED"
             neg_label = "FALSE POSITIVE"
             candidate_label = "CANDIDATE"
@@ -83,7 +84,7 @@ def model1(df,dataset_type,model_choice):
             label_col = "tfopwg_disp"
             id_col = "toi"
             feature_cols = ['st_pmra','pl_trandurh','pl_trandep','pl_rade','pl_insol','pl_eqt','st_tmag','st_dist','st_teff']
-            position_cols = ['ra','dec','st_dist']   
+            posandhab_cols = ['ra','dec','st_dist','habitable_prediction']   
             pos_label = ["CP","KP"]
             neg_label = ["FP"]
             candidate_label = ["PC","APC"]
@@ -95,8 +96,8 @@ def model1(df,dataset_type,model_choice):
             dfconfirmed = df[df[label_col]==pos_label]
             dfFalsePositive = df[df[label_col]==neg_label]
             dfcandidates = df[df[label_col]==candidate_label]
-        dfcandidateposition = dfcandidates[position_cols]
-        dfconfirmedfor3d = dfconfirmed[[label_col]+position_cols+[id_col]]
+        dfcandidateposition = dfcandidates[posandhab_cols]
+        dfconfirmedfor3d = dfconfirmed[[label_col]+posandhab_cols+[id_col]]
         dfconfirmed = dfconfirmed[[label_col]+feature_cols]
         dfFalsePositive = dfFalsePositive[[label_col]+feature_cols]
         dfcandidates = dfcandidates[[id_col,label_col]+feature_cols]
@@ -144,6 +145,31 @@ def model1(df,dataset_type,model_choice):
         results_df = pd.concat([dfcandidateposition, dfcandidates[[id_col,label_col]]], axis=1)
         results_dfwProba= pd.concat([dfcandidateposition,dfcandidateswproba[[id_col,label_col]]],axis=1)
         return results_df, accuracy, confmatrix, classreport, coefs, feature_cols, dfconfirmedfor3d, results_dfwProba
+def to_cartesian(df, dataset):
+    if dataset == "k2":
+        dist = df["sy_dist"].astype(float).fillna(1.0).values
+        name_col = "pl_name"
+    elif dataset == "kepler":
+        dist = df["koi_dist"].astype(float).fillna(1.0).values
+        name_col = "kepid"
+    elif dataset == "tess":
+        dist = df["st_dist"].astype(float).fillna(1.0).values
+        name_col = "toi"
+    else:
+        return []   
+    median_dist = np.median(dist)
+    mask = dist <= 10 * median_dist
+    dist = dist[mask]
+    df = df.iloc[mask]
+    ra = np.radians(df["ra"].astype(float).values)
+    dec = np.radians(df["dec"].astype(float).values)
+    x = dist * np.cos(dec) * np.cos(ra)
+    y = dist * np.cos(dec) * np.sin(ra)
+    z = dist * np.sin(dec)
+    points = []
+    for name, xx, yy, zz, Habitability in zip(df[name_col], x, y, z, df['habitable_prediction']):
+        points.append({"name": str(name), "x": float(xx), "y": float(yy), "z": float(zz),"Habitability":str(Habitability)})
+    return points
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -178,12 +204,16 @@ def analyze():
             f.write(str(confmatrix) + '\n\n')
             f.write('Classification Report:\n') 
             f.write(classreport + '\n')
+        pointscand = to_cartesian(results_df[results_df.iloc[:,-1]==1], dataset_type)
+        pointsconf = to_cartesian(dfconfirmedfor3d, dataset_type)
         return render_template("analyze.html",
                                csv_file=csv_file,
                                txt_file=txt_file,
                                csv_filewP=csv_filewP,
                                accuracy=accuracy,
-                               dataset=dataset_type)
+                               dataset=dataset_type,
+                               pointscand=json.dumps(pointscand),
+                               pointsconf=json.dumps(pointsconf))
     return render_template("analyze.html")
 @app.route("/about")
 def download():
