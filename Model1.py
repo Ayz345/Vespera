@@ -7,6 +7,15 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from xgboost import XGBClassifier
+from flask import Flask, render_template, request, send_from_directory
+import os
+UPLOAD_FOLDER = 'uploads'
+RESULT_FOLDER = 'results'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(RESULT_FOLDER, exist_ok=True)
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['RESULT_FOLDER'] = RESULT_FOLDER
 def classify_habitability(df, dataset_type):
     if dataset_type == "tess":
         col_orbper = "pl_orbper"
@@ -135,5 +144,77 @@ def model1(df,dataset_type,model_choice):
         results_df = pd.concat([dfcandidateposition, dfcandidates[[id_col,label_col]]], axis=1)
         results_dfwProba= pd.concat([dfcandidateposition,dfcandidateswproba[[id_col,label_col]]],axis=1)
         return results_df, accuracy, confmatrix, classreport, coefs, feature_cols, dfconfirmedfor3d, results_dfwProba
-    
+@app.route("/")
+def home():
+    return render_template("home.html")
+@app.route("/analyze", methods=["GET", "POST"])
+def analyze():
+    if request.method == "POST":
+        dataset_type = request.form.get("dataset")
+        model_choice = request.form.get("model_choice")
+        file = request.files['file']
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(filepath)
+        df = pd.read_csv(filepath, comment='#')
+        results_df, accuracy, confmatrix, classreport, coefs, cols, dfconfirmedfor3d, results_dfwProba = model1(df, dataset_type, model_choice)
+        csv_file = f"Predictions_{dataset_type}.csv"
+        csv_filewP=f"Predictions(Probabilistic)_{dataset_type}.csv"
+        txt_file = f"Performance_{dataset_type}.txt"
+        csv_path = os.path.join(app.config['RESULT_FOLDER'], csv_file)
+        csv_pathwP=os.path.join(app.config['RESULT_FOLDER'], csv_filewP)
+        with open(csv_path, "w") as f:
+            f.write("#Created by Vespera\n")
+        results_df.to_csv(csv_path, index=False, mode="a")
+        with open(csv_pathwP, "w") as f:
+            f.write("#Created by Vespera\n")
+        results_dfwProba.to_csv(csv_pathwP, index=False, mode="a")
+        txt_path = os.path.join(app.config['RESULT_FOLDER'], txt_file)
+        with open(txt_path, 'w') as f:
+            f.write("#Created by Vespera\n")
+            f.write(f'Model Name:{model_choice}\n\n')
+            f.write('--- Model Performance Metrics ---\n\n')
+            f.write(f'Accuracy: {accuracy:.4f}\n\n')
+            f.write('Confusion Matrix:\n')
+            f.write(str(confmatrix) + '\n\n')
+            f.write('Classification Report:\n') 
+            f.write(classreport + '\n')
+        return render_template("analyze.html",
+                               csv_file=csv_file,
+                               txt_file=txt_file,
+                               csv_filewP=csv_filewP,
+                               accuracy=accuracy,
+                               dataset=dataset_type)
+    return render_template("analyze.html")
+@app.route("/about")
+def download():
+    return render_template("about.html")
+@app.route("/data")
+def data():
+    return render_template("data.html")
+@app.route("/compare", methods=["GET", "POST"])
+def compare():
+    if request.method == "POST":
+        dataset_type = request.form.get("dataset_compare")
+        file = request.files['file_compare']
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(filepath)
+        df = pd.read_csv(filepath, comment='#')
+        models = {
+            "Logistic Regression": "logreg",
+            "Random Forest": "rf",
+            "SVM": "svm",
+            "XGBoost": "xgb"
+        }
+        results = []
+        for name, key in models.items():
+            _, acc, _, _, _, _, _,_  = model1(df, dataset_type, model_choice=key)
+            results.append({"Model": name, "Accuracy": round(acc, 4)})
+        comp_df = pd.DataFrame(results)
+        return render_template("compare.html", comparison_table=comp_df.to_html(index=False))
+    return render_template("compare.html")
+@app.route('/results/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['RESULT_FOLDER'], filename, as_attachment=True)
+if __name__ == "__main__":
+    app.run(debug=True)
 
