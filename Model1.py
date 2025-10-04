@@ -7,6 +7,33 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from xgboost import XGBClassifier
+def classify_habitability(df, dataset_type):
+    if dataset_type == "tess":
+        col_orbper = "pl_orbper"
+        col_rade = "pl_rade"
+        col_teff = "st_teff"
+        col_eqt = "pl_eqt"
+    elif dataset_type == "kepler":
+        col_orbper = "koi_period"
+        col_rade = "koi_prad"
+        col_teff = "koi_steff"
+        col_eqt = "koi_teq"
+    elif dataset_type == "k2":
+        col_orbper = "pl_orbper"
+        col_rade = "pl_rade"
+        col_teff = "st_teff"
+        col_eqt = "pl_eqt"
+    df[col_orbper] = df[col_orbper].astype(float).fillna(df[col_orbper].median())
+    df[col_rade] = df[col_rade].astype(float).fillna(df[col_rade].median())
+    df[col_teff] = df[col_teff].astype(float).fillna(df[col_teff ].median())
+    df[col_eqt] = df[col_eqt].astype(float).fillna(df[col_eqt].median())
+    orbper_mask = df[col_orbper].between(50, 500) if col_orbper in df else True
+    rade_mask   = df[col_rade].between(0.5, 2.5) if col_rade in df else True
+    teff_mask   = df[col_teff].between(4800, 6300) if col_teff in df else True
+    eqt_mask    = df[col_eqt].between(180, 310) if col_eqt in df else True
+    habitable_mask = orbper_mask & rade_mask & teff_mask & eqt_mask
+    df["habitable_prediction"] = habitable_mask.map({True: "Habitable", False: "Unhabitable"})
+    return df
 def add_kepler_distance(df):
     sigma = 5.670374419e-8
     R_sun = 6.957e8
@@ -25,6 +52,7 @@ def add_kepler_distance(df):
     df["koi_dist"] = d_m / pc
     return df
 def model1(df,dataset_type,model_choice):
+        df=classify_habitability(df)
         if dataset_type == "k2":
             label_col = "disposition"
             id_col = "pl_name"
