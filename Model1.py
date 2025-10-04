@@ -1,5 +1,12 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from xgboost import XGBClassifier
 def add_kepler_distance(df):
     sigma = 5.670374419e-8
     R_sun = 6.957e8
@@ -12,13 +19,12 @@ def add_kepler_distance(df):
     R_star = df["koi_srad"].values * R_sun
     T_star = df["koi_steff"].values
     m_kep = df["koi_kepmag"].values
-
     L_star = 4 * np.pi * (R_star**2) * sigma * (T_star**4)
     F_obs = F0 * 10**(-0.4 * m_kep)
     d_m = np.sqrt(L_star / (4 * np.pi * F_obs))
     df["koi_dist"] = d_m / pc
     return df
-def model1(df,dataset_type):
+def model1(df,dataset_type,model_choice):
         if dataset_type == "k2":
             label_col = "disposition"
             id_col = "pl_name"
@@ -69,3 +75,20 @@ def model1(df,dataset_type):
         for col in feature_cols:
             if dfcandidates[col].isnull().any():
                 dfcandidates[col].fillna(dfcombined[col].median(), inplace=True)
+        X = dfcombined[feature_cols]
+        y = dfcombined[label_col].astype(int)
+        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.1, random_state=42, stratify=y)
+        scaler = StandardScaler()
+        Xtrain_s = scaler.fit_transform(Xtrain)
+        Xtest_s = scaler.transform(Xtest)
+        if model_choice == "logreg":
+            model = LogisticRegression(random_state=42, max_iter=1000)
+        elif model_choice == "rf":
+            model = RandomForestClassifier(random_state=42)
+        elif model_choice == "svm":
+            model = SVC(probability=True, random_state=42)
+        elif model_choice == "xgb":
+            model = XGBClassifier(random_state=42, use_label_encoder=False, eval_metric="logloss")
+        else:
+            model = LogisticRegression(random_state=42, max_iter=1000)
+
