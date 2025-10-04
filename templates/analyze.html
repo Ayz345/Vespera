@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html lang="">
+	<head>
+		<title>Upload</title>
+		<link rel="icon" type="image/x-icon" href="/static/images/Vespera_logo.ico">
+		<style>
+			
+body{
+	margin:0;
+	padding:0;
+	background-image:linear-gradient(to bottom right,rgba(0,0,120,1),rgba(150, 0, 150, 1));
+	background-size: 100%;
+	bottom:0;
+	background-repeat: no-repeat;
+}
+
+h1{
+	font-family:Arial;
+}
+
+.top_bar{
+	background-color: rgb(0,0,100);
+	background-image: linear-gradient(to right ,rgba(20,20,20,0.3),rgba(40,40,40,0.15),rgba(0,0,0,0),rgba(191, 129, 224, 0.1),rgba(124, 69, 212, 0.3));
+	height:80px;
+	width:100%;
+	color:white;
+	font-size:18pt;
+	text-align:rigth;
+	position:fixed;
+	top:0;
+	padding: 0;
+	z-index: 1;
+}
+.top_buttons{
+	position:absolute;
+	background-color:rgba(0,0,0,0);
+	height:100%;
+	width:10%;
+	border:none;
+	color:rgb(255,255,255);
+    font-size:13pt;
+	top:0;
+	margin: 0;
+	transition-duration: 0.4s;
+}
+.top_buttons:hover{
+	background-color:rgba(255,255,255,0.2);
+	border-color:rgba(255,255,255,0.2);
+	margin: 0;
+}
+footer{
+	display:inline-block;
+	background-color: rgb(70,0,100);
+	height:15%;
+	width:100%;
+	color:gray;
+	font-size:10pt;
+	font-family: Arial, Helvetica, sans-serif;
+	text-align: center;
+	position: static;
+	bottom: 0;
+	padding-top: 10px;
+	margin: 0;
+	background-image: linear-gradient(to right, rgba(0,0,0,0),rgba(0, 0, 0,0.3 ));
+}
+a{
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 14pt;
+	color: white;
+	text-decoration: underline;
+}
+a:hover{
+	color: lightgray;
+	text-decoration: none;
+}
+		</style>
+		<style>
+			select{
+    width: 20%;
+    height: 30px;
+    border-radius: 10px;
+    border: solid rgba(200,200,200,0.3);
+    padding-left: 10px;
+    font-size: 14pt;
+    background-color: rgba(30,30,150,1);
+    color: white;
+}
+.run_model{
+    width: 100px;
+    height: 50px;
+    border-radius: 10px;
+    border: solid rgba(200,200,200,0.3);
+    background-color: rgba(30,30,150,1);
+    color: white;
+    font-size: 10pt;
+    font-family: Arial, Helvetica, sans-serif;
+    cursor: pointer;
+    transition-duration: 0.4s;
+}
+.run_model:hover{
+    background-color: rgba(0,0,100,1);
+}
+.file_input{
+    border: solid rgba(200,200,200,0.3);
+    border-radius: 10px;
+    padding: 5px;
+    font-size: 14pt;
+    background-color: rgba(30,30,150,1);
+    color: white;
+    width: 40%;
+}
+.file_input::file-selector-button{
+    border: solid rgba(200,200,200,0.3);
+    border-radius: 10px;
+    padding: 5px;
+    font-size: 14pt;
+    background-color: rgba(50,50,200,1);
+    color: white;
+    cursor: pointer;
+    transition-duration: 0.4s;
+}
+		</style>
+				<style>
+			.star{
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    width: 4px;
+    height: 4px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1)  ;
+    animation:  animate 0.25s linear infinite;
+    z-index: -1;
+}
+.star::before{
+    content: '';
+    position: absolute;
+    top: 10%;
+    transform: translateY(-50%);
+    width: 300px;
+    height: 1px;
+    background: linear-gradient(90deg, #fff, transparent);
+}
+@keyframes animate {
+    0%
+    {
+        transform: rotate(315deg) translateX(0);
+        opacity: 1;
+    }
+    70%
+    {
+        opacity: 1;
+
+    }
+    100%
+    {
+        transform: rotate(315deg) translateX(-1000px);
+        opacity: 0;
+
+    }
+    
+}
+.star:nth-child(1){
+    top: 0;
+    left: 30%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 4s;
+}
+.star:nth-child(2){
+    top: 5%;
+    left: 15%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 2s;
+}
+.star:nth-child(3){
+    top: 25%;
+    left: 40%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 3s;
+}
+.star:nth-child(4){
+    top: 0;
+    left: 50%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 4s;
+}
+.star:nth-child(5){
+    top: 15%;
+    left: 70%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 2s;
+}
+.star:nth-child(6){
+    top: 35%;
+    left: 80%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 3s;
+}
+
+
+		</style>
+        
+		<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+	</head>
+	<body>
+		<nav class="top_bar">
+			<img src="/static/images/vespera_logo.jpeg" style="width:60px;height:60px;border-radius:10px;margin:10px;" align="right">
+			<a href="\"><button class="top_buttons">
+				<img src="/static/images/home_page_image.png" style="width:20px;height:20px;">
+				Main Page
+			</button></a>
+			<a href="\data"><button class="top_buttons" style="margin-left: 10%;">
+				NASA Data
+			</button></a>
+			<a href="\analyze"><button class="top_buttons", style="margin-left: 20%;">
+				Upload Data
+			</button></a>
+			<a href="\about"><button class="top_buttons", style="margin-left: 40%;" >
+				About Us
+			</button></a>
+			<a href="\compare"><button class="top_buttons", style="margin-left: 30%;" >
+				Compare 
+			</button></a>
+		</nav>  
+		<div>
+			<span class="star"></span>
+			<span class="star"></span>
+		</div>
+        <img src="/static/images/vespera_logo_colorful-removebg-preview.png" style="position: fixed;opacity: 0.1; left: -100px;top: -200px;;height:1500px;width: 1500px;z-index: -1;"  >
+		<section style="margin:80px;margin-bottom:0;height:100%;width:85%;padding:50px;color: white;font-family: Arial, Helvetica, sans-serif;">
+			<h1>Exoplanet Classifier</h1>
+			<form method="post" enctype="multipart/form-data">
+       			<select name="dataset" required>
+					<option value="none" selected disabled hidden>Select a dataset</option>
+            		<option value="k2">K2</option>
+            		<option value="kepler">Kepler</option>
+            		<option value="tess">TESS</option>
+        		</select>
+				<br>
+				<br>
+        		<select name="model_choice" required>
+					<option value="none" selected disabled hidden>Select a model</option>
+            		<option value="logreg">Logistic Regression</option>
+            		<option value="rf">Random Forest</option>
+            		<option value="svm">Support Vector Machine</option>
+            		<option value="xgb">XGBoost</option>
+        		</select>
+        		<br><br>
+        		<input type="file" class="file_input" name="file" required>
+        		<button type="submit" class="run_model">Run Model</button>
+			</form>
+           {% if csv_file and txt_file %}
+        <p> Model Doğruluğu: {{ (accuracy * 100) | round(2) }}%</p>
+		<ul>
+			<li><p><a href="{{ url_for('download_file', filename=csv_file) }}">Tahminleri CSV indir</a></p></li>
+			<li><p><a href="{{ url_for('download_file', filename=csv_filewP) }}">Tahminleri(Olasılıklı) CSV indir</a></p></li>
+			<li><p><a href="{{ url_for('download_file', filename=txt_file) }}">Performans TXT indir</a></p></li>
+		</ul>
+        
+    {% endif %}
+
+    {% if pointscand or pointsconf %}
+        <h2>3D Gezegen Konumları ({{ dataset|upper }})</h2>
+        <div id="plotly-3d" style="width:100%;height:600px;"></div>
+        <script>
+            const pointscand = {{ pointscand|safe }};
+            const pointsconf = {{ pointsconf|safe }};
+
+            function splitByHabitability(points, isCandidate) {
+        const habitable = points.filter(p => p.Habitability === "Habitable");
+        const unhabitable = points.filter(p => p.Habitability !== "Habitable");
+
+        return {
+            habitable: {
+                x: habitable.map(p => p.x),
+                y: habitable.map(p => p.y),
+                z: habitable.map(p => p.z),
+                text: habitable.map(p => p.name),
+                mode: 'markers',
+                type: 'scatter3d',
+                marker: {
+                    size: 4,
+                    color: isCandidate ? 'green' : 'orange' // 🟢 or 🟠
+                },
+                name: isCandidate ? 'Candidate - Habitable' : 'Confirmed - Habitable'
+            },
+            unhabitable: {
+                x: unhabitable.map(p => p.x),
+                y: unhabitable.map(p => p.y),
+                z: unhabitable.map(p => p.z),
+                text: unhabitable.map(p => p.name),
+                mode: 'markers',
+                type: 'scatter3d',
+                marker: {
+                    size: 4,
+                    color: isCandidate ? 'blue' : 'red' // 🔵 or 🔴
+                },
+                name: isCandidate ? 'Candidate - Unhabitable' : 'Confirmed - Unhabitable'
+            }
+        };
+    }
+
+    const candSplit = splitByHabitability(pointscand, true);
+    const confSplit = splitByHabitability(pointsconf, false);
+
+    const data = [
+        candSplit.habitable,
+        candSplit.unhabitable,
+        confSplit.habitable,
+        confSplit.unhabitable
+    ];
+            const layout = {
+                scene: {
+                    xaxis: { title: 'X (pc)' },
+                    yaxis: { title: 'Y (pc)' },
+                    zaxis: { title: 'Z (pc)' }
+                },
+                legend: { x: 0, y: 1 },
+                margin: { l: 0, r: 0, b: 0, t: 0 }
+            };
+
+            const plotDiv = document.getElementById('plotly-3d');
+            Plotly.newPlot('plotly-3d',data, layout);
+
+            //Plotly.newPlot('plotly-2',[confSplit.habitable,confSplit.unhabitable],layout);
+        </script>
+    {% endif %}
+
+		</section>
+		<div style="height: 500px;margin-left: 120px;color: white;font-family: Arial, Helvetica, sans-serif;">
+            <h1>How to Use?</h1>
+            <p style="width: 75%;">Firstly you have to select your Mission which can be one of Kepler,K2 and Tess.Secondly you should select Ai model you want to train and test your data.Then you need to upload your data .Finally you click the running button and you have your graph.The red points are confirmed-unhabitable planets, the blue points are candidate-unhabitable planets,the orange points are confirmed-habitable planets and the green points are candidate-habitable planets.</p>
+        </div>
+        <footer>
+			<h1 style="font-size: 10pt;">Builded for NASA Space Apps 2025 </h1>
+			<h2 style="font-size: 10pt;"> By Vespera™</h2>
+			<p style="font-size: 8pt;">Omer Akhan , Ayaz Buyukterzi<br>Ruzgar Kusakli , Baris Canbolat , Eren Sapci , Ata Orkun Coskun</p>
+
+		</footer>
+	
+	</body>
+</html>

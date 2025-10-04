@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Compare Models</title>
+		<link rel="icon" type="image/x-icon" href="/static/images/Vespera_logo.ico">
+		<style>
+			
+body{
+	margin:0;
+	padding:0;
+	background-image:linear-gradient(to bottom right,rgba(0,0,120,1),rgba(150, 0, 150, 1));
+	background-size: 100%;
+	bottom:0;
+	background-repeat: no-repeat;
+}
+
+h1{
+	font-family:Arial;
+}
+
+.top_bar{
+	background-color: rgb(0,0,100);
+	background-image: linear-gradient(to right ,rgba(20,20,20,0.3),rgba(40,40,40,0.15),rgba(0,0,0,0),rgba(191, 129, 224, 0.1),rgba(124, 69, 212, 0.3));
+	height:80px;
+	width:100%;
+	color:white;
+	font-size:18pt;
+	text-align:rigth;
+	position:fixed;
+	top:0;
+	padding: 0;
+	z-index: 1;
+}
+.top_buttons{
+	position:absolute;
+	background-color:rgba(0,0,0,0);
+	height:100%;
+	width:10%;
+	border:none;
+	color:rgb(255,255,255);
+    font-size:13pt;
+	top:0;
+	margin: 0;
+	transition-duration: 0.4s;
+}
+.top_buttons:hover{
+	background-color:rgba(255,255,255,0.2);
+	border-color:rgba(255,255,255,0.2);
+	margin: 0;
+}
+footer{
+	display:inline-block;
+	background-color: rgb(70,0,100);
+	height:15%;
+	width:100%;
+	color:gray;
+	font-size:10pt;
+	font-family: Arial, Helvetica, sans-serif;
+	text-align: center;
+	position: static;
+	bottom: 0;
+	padding-top: 10px;
+	margin: 0;
+	background-image: linear-gradient(to right, rgba(0,0,0,0),rgba(0, 0, 0,0.3 ));
+}
+a{
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 14pt;
+	color: white;
+	text-decoration: underline;
+}
+a:hover{
+	color: lightgray;
+	text-decoration: none;
+}
+		</style>
+				<style>
+			.star{
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    width: 4px;
+    height: 4px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1)  ;
+    animation:  animate 0.25s linear infinite;
+    z-index: -1;
+}
+.star::before{
+    content: '';
+    position: absolute;
+    top: 10%;
+    transform: translateY(-50%);
+    width: 300px;
+    height: 1px;
+    background: linear-gradient(90deg, #fff, transparent);
+}
+@keyframes animate {
+    0%
+    {
+        transform: rotate(315deg) translateX(0);
+        opacity: 1;
+    }
+    70%
+    {
+        opacity: 1;
+
+    }
+    100%
+    {
+        transform: rotate(315deg) translateX(-1000px);
+        opacity: 0;
+
+    }
+    
+}
+.star:nth-child(1){
+    top: 0;
+    left: 30%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 4s;
+}
+.star:nth-child(2){
+    top: 5%;
+    left: 15%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 2s;
+}
+.star:nth-child(3){
+    top: 25%;
+    left: 40%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 3s;
+}
+.star:nth-child(4){
+    top: 0;
+    left: 50%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 4s;
+}
+.star:nth-child(5){
+    top: 15%;
+    left: 70%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 2s;
+}
+.star:nth-child(6){
+    top: 35%;
+    left: 80%;
+    right:initial;
+    animation-delay:0 ;
+    animation-duration: 3s;
+}
+
+
+		</style>
+		<style>
+			select{
+    width: 20%;
+    height: 30px;
+    border-radius: 10px;
+    border: solid rgba(200,200,200,0.3);
+    padding-left: 10px;
+    font-size: 14pt;
+    background-color: rgba(30,30,150,1);
+    color: white;
+}
+.run_model{
+    width: 100px;
+    height: 50px;
+    border-radius: 10px;
+    border: solid rgba(200,200,200,0.3);
+    background-color: rgba(30,30,150,1);
+    color: white;
+    font-size: 10pt;
+    font-family: Arial, Helvetica, sans-serif;
+    cursor: pointer;
+    transition-duration: 0.4s;
+}
+.run_model:hover{
+    background-color: rgba(0,0,100,1);
+}
+.file_input{
+    border: solid rgba(200,200,200,0.3);
+    border-radius: 10px;
+    padding: 5px;
+    font-size: 14pt;
+    background-color: rgba(30,30,150,1);
+    color: white;
+    width: 40%;
+}
+.file_input::file-selector-button{
+    border: solid rgba(200,200,200,0.3);
+    border-radius: 10px;
+    padding: 5px;
+    font-size: 14pt;
+    background-color: rgba(50,50,200,1);
+    color: white;
+    cursor: pointer;
+    transition-duration: 0.4s;
+}
+		</style>
+        <style>
+            table,tr,th{
+                background-color:rgba(255, 255, 255,0.1 );
+                color: white;
+                border-radius: 5px;
+                border-color: rgba(0, 0, 0,0.3 );
+                text-align: left;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 14pt;
+            }
+            table{
+                width:75%;
+                height: 200px;
+            }
+        </style>
+	</head>
+	<body>
+		<nav class="top_bar">
+			<img src="/static/images/vespera_logo.jpeg" style="width:60px;height:60px;border-radius:10px;margin:10px;" align="right">
+			<a href="\"><button class="top_buttons">
+				<img src="/static/images/home_page_image.png" style="width:20px;height:20px;">
+				Main Page
+			</button></a>
+			<a href="\data"><button class="top_buttons" style="margin-left: 10%;">
+				NASA Data
+			</button></a>
+			<a href="\analyze"><button class="top_buttons", style="margin-left: 20%;">
+				Upload Data
+			</button></a>
+            <a href="\compare"><button class="top_buttons", style="margin-left: 30%;" >
+				Compare
+			</button></a>
+			<a href="\about"><button class="top_buttons", style="margin-left: 40%;" >
+				About Us
+			</button></a>
+            
+			
+		</nav>
+		<div>
+			<span class="star"></span>
+			<span class="star"></span>
+			
+		</div>
+		<img src="/static/images/vespera_logo_colorful-removebg-preview.png" style="position: fixed;opacity: 0.1; left: -100px;top: -200px;;height:1500px;width: 1500px;z-index: -1;"  >
+		<section style="font-family:Arial, Helvetica, sans-serif;color:white;margin:80px;margin-bottom:0;height:100%;width:85%;padding:50px;">
+		    <h1>Model Comparrison</h1>
+            <form method="post" enctype="multipart/form-data">
+                <p>Choose Dataset:</p>
+                <select name="dataset_compare" required>
+                    <option value="k2">K2</option>
+                    <option value="kepler">Kepler</option>
+                    <option value="tess">TESS</option>
+                </select>
+                <br><br>
+                <input type="file" class="file_input" name="file_compare" required>
+                <button type="submit" class="run_model">Compare</button>
+            </form>
+    
+
+            {% if comparison_table %}
+                <h3>Accuracy Comparrison</h3>
+                {{ comparison_table|safe }}
+            {% endif %}
+		</section>
+        <div style="height: 500px;margin-left: 120px;color: white;font-family: Arial, Helvetica, sans-serif;">
+            <h1>How to Use?</h1>
+            <p style="width: 75%;">Firstly you have to select your Mission which can be one of Kepler,K2 and Tess.Secondly you need to upload your data .Finally you click the running button and you have your table.The table you have shows the accuricies of different models.</p>
+        </div>
+		<footer>
+			<h1 style="font-size: 10pt;">Builded for NASA Space Apps 2025 </h1>
+			<h2 style="font-size: 10pt;"> By Vespera™</h2>
+			<p style="font-size: 8pt;">Omer Akhan , Ayaz Buyukterzi<br>Ruzgar Kusakli , Baris Canbolat , Eren Sapci , Ata Orkun Coskun</p>
+
+		</footer>
+	
+	</body>
+</html>
