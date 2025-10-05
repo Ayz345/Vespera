@@ -258,17 +258,17 @@ a:hover{
         		<button type="submit" class="run_model">Run Model</button>
 			</form>
            {% if csv_file and txt_file %}
-        <p> Model Doğruluğu: {{ (accuracy * 100) | round(2) }}%</p>
+        <p> Accuracy: {{ (accuracy * 100) | round(2) }}%</p>
 		<ul>
-			<li><p><a href="{{ url_for('download_file', filename=csv_file) }}">Tahminleri CSV indir</a></p></li>
-			<li><p><a href="{{ url_for('download_file', filename=csv_filewP) }}">Tahminleri(Olasılıklı) CSV indir</a></p></li>
-			<li><p><a href="{{ url_for('download_file', filename=txt_file) }}">Performans TXT indir</a></p></li>
+			<li><p><a href="{{ url_for('download_file', filename=csv_file) }}">Predictions CSV download</a></p></li>
+			<li><p><a href="{{ url_for('download_file', filename=csv_filewP) }}">Predictions(Probability) CSV download</a></p></li>
+			<li><p><a href="{{ url_for('download_file', filename=txt_file) }}">Performance TXT download</a></p></li>
 		</ul>
         
     {% endif %}
 
     {% if pointscand or pointsconf %}
-        <h2>3D Gezegen Konumları ({{ dataset|upper }})</h2>
+        <h2>3D Planet Positions ({{ dataset|upper }})</h2>
         <div id="plotly-3d" style="width:100%;height:600px;"></div>
         <script>
             const pointscand = {{ pointscand|safe }};
@@ -329,15 +329,18 @@ a:hover{
 
             const plotDiv = document.getElementById('plotly-3d');
             Plotly.newPlot('plotly-3d',data, layout);
-
-            //Plotly.newPlot('plotly-2',[confSplit.habitable,confSplit.unhabitable],layout);
         </script>
     {% endif %}
 
 		</section>
 		<div style="height: 500px;margin-left: 120px;color: white;font-family: Arial, Helvetica, sans-serif;">
             <h1>How to Use?</h1>
-            <p style="width: 75%;">Firstly you have to select your Mission which can be one of Kepler,K2 and Tess.Secondly you should select Ai model you want to train and test your data.Then you need to upload your data .Finally you click the running button and you have your graph.The red points are confirmed-unhabitable planets, the blue points are candidate-unhabitable planets,the orange points are confirmed-habitable planets and the green points are candidate-habitable planets.</p>
+            <p style="width: 75%;font-size: 14pt;">Here we have our Upload part which is
+				one of the main parts of our website designed with both ease of use 
+				and perfonce in our mind. To use this, you can download nasa data from 
+				their website or from our website's nasa data part  just don't forget
+				to press "Values only/no errors" button for better performence. After that upload your nasa data
+				, select the dataset type and the model type. Sit back, and enjoy the magic happen</p>
         </div>
         <footer>
 			<h1 style="font-size: 10pt;">Builded for NASA Space Apps 2025 </h1>
