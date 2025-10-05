@@ -62,7 +62,7 @@ def add_kepler_distance(df):
     df["koi_dist"] = d_m / pc
     return df
 def model1(df,dataset_type,model_choice):
-        df=classify_habitability(df)
+        df=classify_habitability(df,dataset_type)
         if dataset_type == "k2":
             label_col = "disposition"
             id_col = "pl_name"
