@@ -1,25 +1,13 @@
-For executing our code in your computer, first of all you need a structure like:
-        VWebsite(Optional)-
-                -static-|
-                        |-images-|
-                        |        |-home_page_image.png
-                        |        |-team_photo.jpeg
-                        |        |-Vespera_logo.jpeg
-                        |        |-Vespera_logo.ico
-                        |        |-vespera_logo_colorful.jpeg
-                        |        |-vespera_logo_colorful-removebg-preview.png
-                        |-templates-|
-                        |           |-home.html
-                        |           |-about.html 
-                        |           |-analyze.html
-                        |           |-compare.html
-                        |           |-data.html
-                        |-App.py
+To execute our website on your own computer, first you will need git, which you can upload from:https://git-scm.com/downloads . Then type following commands on cmd
 
-Then on cmd: cd Website                                                    - to enter this folder 
-           : python -m venv venv                                           - to create virtual environment named venv
-           : venv\scripts\activate                                         - to enter this virtual environment, (venv) will occur at the left side of the screen
-           : pip install pandas numpy flask xgboost scikit-learn           - to install required libraries
-           : python App.py                                                 - to run the code
-Then if done correctly, you should get a link for our website that you can click while pressing ctrl to open our website. Now you can analyze as much as you want ☺.
-By the way you can just do pip install -r requirements.txt instead as well.
+mkdir Vespera_Website
+cd Vespera_Website
+git clone https://github.com/Ayz345/Vespera.git
+cd Vespera
+python -m venv venv
+venv\scripts\activate
+pip install -r requirements.txt
+python App.py
+
+
+or you can go to our published website:https://vespera-1.onrender.com/
