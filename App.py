@@ -88,6 +88,8 @@ def model1(df,dataset_type,model_choice):
             pos_label = ["CP","KP"]
             neg_label = ["FP"]
             candidate_label = ["PC","APC"]
+        df1=df.copy()
+        df =df1.drop_duplicates(subset=id_col, keep='first')
         if dataset_type == "tess":
             dfconfirmed = df[df[label_col].isin(pos_label)]
             dfFalsePositive = df[df[label_col].isin(neg_label)]
