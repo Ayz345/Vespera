@@ -226,10 +226,13 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   }
   const rp = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
   function resultsPose(pos, look) {
-    const a = 0.7, R = results.radius * 2.4 * results.zoom;
-    pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.3, results.center.z + Math.cos(a) * R);
-    fwd.copy(results.center).sub(pos).normalize(); right.crossVectors(fwd, UP).normalize();
-    look.copy(results.center).addScaledVector(right, -results.radius * 0.95 * results.zoom);
+    // Orbit the camera around the cloud's centre: Earth, axis and cloud all turn together on screen
+    // Pivot halfway between Earth (origin) and the cloud, so both stay in frame while turning
+    const pv = tmp.copy(results.center).multiplyScalar(0.55);
+    const a = 0.7 + results.yaw, el = Math.max(-1.2, Math.min(1.2, 0.3 + results.pitch)), R = (results.radius * 1.9 + results.center.length() * 0.6) * results.zoom;
+    pos.set(pv.x + Math.sin(a) * Math.cos(el) * R, pv.y + Math.sin(el) * R, pv.z + Math.cos(a) * Math.cos(el) * R);
+    fwd.copy(pv).sub(pos).normalize(); right.crossVectors(fwd, UP).normalize();
+    look.copy(pv).addScaledVector(right, -results.radius * 0.6 * results.zoom);
   }
   function set(name, p) {
     section = name; progress = clamp01(p);
@@ -262,7 +265,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     keyAt(KF[name] || KF.hero, progress);
   }
 
-  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1, yaw: 0, pitch: 0, zoom: 1, arrive: 0 };
+  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1, yaw: 0, pitch: 0, zoom: 1, arrive: 0, idleAt: 0 };
   const resultGroup = new THREE.Group(); resultGroup.visible = false; scene.add(resultGroup);
   function textSprite(text, color, width = 9) {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 96;
@@ -359,12 +362,13 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     origin.visible = axis.visible = showRes;
     if (showRes) { originRing.lookAt(camera.position); ticks.forEach((g) => g.lookAt(camera.position)); }
     resultMat.opacity = section === 'results' ? 1 : section === 'team' ? Math.max(0, 1 - progress / 0.35) : 0;
-    if (resultPts && showRes) { resultGroup.rotation.y = results.yaw + (reducedMotion ? 0 : time * 0.03); resultGroup.rotation.x = results.pitch; }
+    if (section === 'results' && resultPts && !reducedMotion && time > results.idleAt) { results.yaw += 0.00035; set('results', progress); }
     sunMat.uniforms.uTime.value = reducedMotion ? 0 : time;
     sun.rotation.y = reducedMotion ? 0 : time * 0.02;
 
     // Camera easing
-    cam.pos.lerp(target.pos, 0.09); cam.look.lerp(target.look, 0.09); cam.fov += (target.fov - cam.fov) * 0.09;
+    const k = section === 'results' ? 0.18 : 0.09;
+    cam.pos.lerp(target.pos, k); cam.look.lerp(target.look, k); cam.fov += (target.fov - cam.fov) * k;
     camera.position.copy(cam.pos); camera.lookAt(cam.look); camera.fov = cam.fov; camera.updateProjectionMatrix();
 
     // Hero: the planet crosses in front of the star, between the camera and the sun
@@ -454,13 +458,13 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
 
   const setDark = (d) => { dark = clamp01(d); };
   const setOrbit = (t) => { orbitT = clamp01(t); };
-  const turnResults = (dx, dy) => { results.yaw += dx; results.pitch = Math.max(-1.2, Math.min(1.2, results.pitch + dy)); };
+  const turnResults = (dx, dy) => { results.yaw -= dx; results.pitch = Math.max(-0.9, Math.min(1.0, results.pitch + dy)); results.idleAt = clock.getElapsedTime() + 4; if (section === 'results') set('results', progress); };
   const arriveResults = () => {
     results.arrive = 0;
     const o = { v: 0 };
     if (window.gsap && !reducedMotion) window.gsap.to(o, { v: 1, duration: 1.4, ease: 'power3.inOut', onUpdate: () => { results.arrive = o.v; if (section === 'results') set('results', progress); } });
     else results.arrive = 1;
   };
-  const zoomResults = (f) => { results.zoom = Math.max(0.3, Math.min(2.2, results.zoom * f)); if (section === 'results') set('results', progress); };
+  const zoomResults = (f) => { results.zoom = Math.max(0.3, Math.min(2.2, results.zoom * f)); results.idleAt = clock.getElapsedTime() + 4; if (section === 'results') set('results', progress); };
   return { set, setDark, setOrbit, setResults, turnResults, zoomResults, arriveResults, resize };
 }

@@ -166,14 +166,14 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
     const inHud = (e) => e.target.closest('.results__hud, a, button, .map');
     let dragging = false, lx = 0, ly = 0;
     res.addEventListener('pointerdown', (e) => { if (inHud(e)) return; e.preventDefault(); dragging = true; lx = e.clientX; ly = e.clientY; res.classList.add('is-dragging'); });
-    addEventListener('pointermove', (e) => { if (!dragging || !world) return; world.turnResults((e.clientX - lx) * 0.006, (e.clientY - ly) * 0.004); lx = e.clientX; ly = e.clientY; });
+    addEventListener('pointermove', (e) => { if (!dragging || !world) return; world.turnResults((e.clientX - lx) * 0.0035, (e.clientY - ly) * 0.0025); lx = e.clientX; ly = e.clientY; });
     addEventListener('pointerup', () => { dragging = false; res.classList.remove('is-dragging'); });
     res.addEventListener('wheel', (e) => {
       if (inHud(e) || !resultsEntry || !world) return;
       const y = window.scrollY;
-      if (y < resultsEntry.st.start + 10 || y > resultsEntry.st.end - 10) return;     // only while the scene is pinned
+      if (y < resultsEntry.st.start - 5 || y > resultsEntry.st.end + 5) return;      // only while the scene is pinned; the panel side still scrolls
       e.preventDefault();
-      world.zoomResults(Math.exp(-e.deltaY * 0.0012));
+      world.zoomResults(Math.exp(e.deltaY * 0.0012));     // wheel up = closer
     }, { passive: false });
   }
 
