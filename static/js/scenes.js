@@ -27,12 +27,13 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
     const dark = document.getElementById('dark');
     const note = document.getElementById('hero-note');
     const copy = document.querySelector('.hero__copy');
-    pin('hero', '140%', (p) => {
+    pin('hero', '165%', (p) => {
       world && world.set('hero', p);
       gsap.set(copy, { opacity: Math.max(0, 1 - p * 3.5), y: p * -80 });
       note.classList.toggle('is-on', p > 0.08 && p < 0.26);
       setDark(smoothstep(0.43, 0.47, p));          // totality lands at 0.44
-      dark.classList.toggle('is-on', p > 0.5);       // the card plays once, by CSS, at its own speed
+      dark.classList.remove('is-out');
+      dark.classList.toggle('is-on', p > 0.48);      // the card plays once, by CSS, at its own speed
     });
     gsap.from('.hero__title .line > span', { yPercent: 110, duration: 1.3, ease: 'expo.out', stagger: 0.09, delay: 0.2 });
     gsap.from(['.hero__tag', '.hero__lede', '.hero__actions'], { y: 24, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.1, delay: 0.5 });

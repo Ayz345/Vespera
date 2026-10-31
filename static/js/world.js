@@ -192,7 +192,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   const KF = {
     hero: [
       { t: 0, pos: [0.6, 0.5, 8.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
-      { t: 0.8, pos: [-1.4, 0.9, 7.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
+      { t: 0.68, pos: [-1.4, 0.9, 7.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
       { t: 1, pos: [-2, 7, 15], look: [0, 0, 0], fov: 46, dim: 0 },
     ],
     method: [
@@ -264,6 +264,29 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
 
   const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1, yaw: 0, pitch: 0, zoom: 1, arrive: 0 };
   const resultGroup = new THREE.Group(); resultGroup.visible = false; scene.add(resultGroup);
+  function textSprite(text, color, width = 9) {
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 96;
+    const g = cv.getContext('2d'); g.font = '600 64px "Chakra Petch", sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillStyle = color; g.fillText(text.toUpperCase(), 8, 48);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false, opacity: 0.95 }));
+    sp.center.set(0, 0.5); sp.scale.set(width, width * 96 / 1024, 1); return sp;
+  }
+  const origin = new THREE.Group(); origin.visible = false; scene.add(origin);
+  origin.add(new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 32), new THREE.MeshStandardMaterial({ color: 0x9fb4d6, roughness: 0.6, emissive: 0x3b5a8a })));
+  origin.add(new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), rimMaterial(0xc8ff3d)));
+  const originRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.98, 72), new THREE.MeshBasicMaterial({ color: 0xc8ff3d, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+  origin.add(originRing);
+  const originLabel = textSprite('Earth · 0 pc · you are here', '#c8ff3d', 13); originLabel.position.set(1.3, 1.1, 0); origin.add(originLabel);
+  const axis = new THREE.Group(); axis.visible = false; scene.add(axis);
+  const axisLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xf2f0ec, transparent: true, opacity: 0.22 }));
+  axis.add(axisLine);
+  const ticks = [10, 100, 1000].map((pc) => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 48), new THREE.MeshBasicMaterial({ color: 0xf2f0ec, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false })));
+    const l = textSprite(pc.toLocaleString('en') + ' pc', '#f2f0ec', 7); l.position.set(0.8, 0.7, 0); g.add(l);
+    g.userData.pc = pc; axis.add(g); return g;
+  });
   const resultMat = new THREE.PointsMaterial({ size: 0.62, map: dot, vertexColors: true, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
   let resultPts = null;
   function setResults({ pointscand = [], pointsconf = [] }) {
@@ -306,6 +329,10 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     resultGroup.position.copy(c);
     results.center.copy(c); results.radius = Math.max(8, far * 0.75); results.wide = wide; results.angleScale = angleScale;
     results.yaw = 0; results.pitch = 0; results.zoom = 1; resultGroup.rotation.set(0, 0, 0);
+    // The distance axis runs from Earth toward the cloud's centre, ticks at 10, 100 and 1 000 pc
+    const dir = c.clone().normalize();
+    axisLine.geometry.dispose(); axisLine.geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), dir.clone().multiplyScalar(far * 1.05)]);
+    ticks.forEach((g) => { g.position.copy(dir).multiplyScalar(radius(g.userData.pc)); g.lookAt(camera.position); });
     return results;
   }
 
@@ -327,6 +354,10 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     const time = clock.getElapsedTime();
     const showRes = !!resultPts && (section === 'results' || (section === 'team' && progress < 0.4));
     resultGroup.visible = showRes;
+    const inResults = section === 'results' && !!resultPts;
+    sun.visible = corona.visible = !inResults;
+    origin.visible = axis.visible = showRes;
+    if (showRes) { originRing.lookAt(camera.position); ticks.forEach((g) => g.lookAt(camera.position)); }
     resultMat.opacity = section === 'results' ? 1 : section === 'team' ? Math.max(0, 1 - progress / 0.35) : 0;
     if (resultPts && showRes) { resultGroup.rotation.y = results.yaw + (reducedMotion ? 0 : time * 0.03); resultGroup.rotation.x = results.pitch; }
     sunMat.uniforms.uTime.value = reducedMotion ? 0 : time;
@@ -341,7 +372,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     // Stage A (p 0.06–0.30): a small transit, left to right across the star, then gone.
     // Gap (0.30–0.36): nothing. Stage B (0.36–0.52): the same world comes back huge, just in
     // front of the lens, and slides in from the left edge until it covers the star exactly.
-    const p = section === 'hero' ? progress / 0.84 : 0;
+    const p = section === 'hero' ? progress / 0.71 : 0;
     const sA = clamp01((p - 0.06) / 0.24), sB = clamp01((p - 0.36) / 0.16);
     let covered = 0;
     if (section === 'hero' && p < 0.32) {
