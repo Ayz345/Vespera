@@ -188,11 +188,11 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   }
   function set(name, p) {
     section = name; progress = clamp01(p);
-    if (name === 'results') {
-      // Circle the result cloud; scroll and time both turn it
-      const a = progress * 1.6 + orbitTime * 0.06 + 0.6, R = results.radius * 2.3;
+    if (name === 'results' || (name === 'team' && catalog.userData.real)) {
+      // Face the result cloud from one side; only time drifts it, never the scroll
+      const a = orbitTime * 0.04 + 0.7, R = results.radius * 2.3;
       target.pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.35, results.center.z + Math.cos(a) * R);
-      target.look.copy(results.center); target.fov = 44; dim = 0;
+      target.look.copy(results.center); target.fov = 44; dim = name === 'team' ? 0.6 : 0;
       return;
     }
     if (name === 'missions') {
@@ -256,13 +256,13 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   let visible = true;
   document.addEventListener('visibilitychange', () => { visible = !document.hidden; });
   const clock = new THREE.Clock();
-  const tmp = new THREE.Vector3();
+  const tmp = new THREE.Vector3(), fwd = new THREE.Vector3(), right = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
 
   function frame() {
     requestAnimationFrame(frame);
     if (!visible) return;
     const time = clock.getElapsedTime();
-    if (section === 'results' && !reducedMotion) { orbitTime = time; set('results', progress); }
+    if ((section === 'results' || (section === 'team' && catalog.userData.real)) && !reducedMotion) { orbitTime = time; set(section, progress); }
     sunMat.uniforms.uTime.value = reducedMotion ? 0 : time;
     sun.rotation.y = reducedMotion ? 0 : time * 0.02;
 
@@ -272,20 +272,28 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
 
     // Hero: the planet crosses in front of the star, between the camera and the sun
     // The planet comes in from the left, crosses the star, then flies at the camera until it fills the view.
-    // Stage 1: a classic transit, left to the centre of the star's disc.
-    // Stage 2: along the line from the star to the lens, dead centre, until it covers the
-    // star exactly (totality, the corona shows as a ring) and then the whole frame.
-    const e = section === 'hero' ? clamp01((progress - 0.06) / 0.46) : 0;
-    const s1 = clamp01(e / 0.5), s2 = clamp01((e - 0.5) / 0.5);
-    const ease1 = s1 * (2 - s1), ease2 = s2 * s2;
-    const k = lerp(0.3, 0.965, ease2);                                   // fraction of the way to the lens
-    tmp.copy(cam.pos).multiplyScalar(k);                                 // star is at the origin
-    const fx = lerp(-6.5, 0, ease1), fy = 0.1, fz = 2.6;
-    const join = clamp01(s2 / 0.2);
-    planet.position.set(lerp(fx, tmp.x, join), lerp(fy, tmp.y, join), lerp(fz, tmp.z, join));
-    planet.visible = section === 'hero' && e > 0;
-    // Totality: the planet's disc just exceeds the star's when k ≈ 0.83
-    const covered = clamp01((k - 0.80) / 0.06);
+    // Stage A (p 0.06–0.30): a small transit, left to right across the star, then gone.
+    // Gap (0.30–0.36): nothing. Stage B (0.36–0.52): the same world comes back huge, just in
+    // front of the lens, and slides in from the left edge until it covers the star exactly.
+    const p = section === 'hero' ? progress : 0;
+    const sA = clamp01((p - 0.06) / 0.24), sB = clamp01((p - 0.36) / 0.16);
+    let covered = 0;
+    if (section === 'hero' && p < 0.32) {
+      const ea = sA * (2 - sA);
+      planet.position.set(lerp(-6.5, 6.5, ea), 0.1, 2.6);
+      planet.visible = sA > 0 && sA < 1;
+    } else if (section === 'hero' && p >= 0.36) {
+      const eb = sB * sB * (3 - 2 * sB);
+      fwd.copy(cam.look).sub(cam.pos).normalize();
+      right.crossVectors(fwd, UP).normalize();
+      const dp = lerp(1.25, 1.05, eb);                                   // distance in front of the lens
+      const off = lerp(-1.15, 0, eb);                                    // lateral offset, left edge to centre
+      planet.position.copy(cam.pos).addScaledVector(fwd, dp).addScaledVector(right, off);
+      planet.visible = true;
+      covered = clamp01(1 - Math.abs(off) / 0.35);                       // the corona flares as it closes
+    } else {
+      planet.visible = false;
+    }
     bloom.strength = lerp(1.0, 1.3, covered) * (1 - dim * 0.5) * (1 - dark);   // the corona flares at totality
 
     // Method: the sweep classifies the catalog
