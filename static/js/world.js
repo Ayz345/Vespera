@@ -56,6 +56,33 @@ function spriteTexture(inner, outer) {
   return new THREE.CanvasTexture(cv);
 }
 
+function coronaTexture(rgb) {
+  // Radial streaks like a real corona photograph, plus a soft core
+  const S = 1024, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'); const c = S / 2;
+  const soft = g.createRadialGradient(c, c, 0, c, c, c);
+  soft.addColorStop(0, `rgba(${rgb},0.5)`); soft.addColorStop(0.16, `rgba(${rgb},0.16)`); soft.addColorStop(0.4, `rgba(${rgb},0.03)`); soft.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = soft; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = 'lighter';
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 150; i++) {
+    const a = rnd() * Math.PI * 2, len = c * (0.3 + Math.pow(rnd(), 2.6) * 0.65), w = 0.7 + rnd() * 1.4, op = 0.05 + rnd() * 0.2;
+    const grad = g.createLinearGradient(c, c, c + Math.cos(a) * len, c + Math.sin(a) * len);
+    grad.addColorStop(0, `rgba(${rgb},${op})`); grad.addColorStop(0.5, `rgba(${rgb},${op * 0.5})`); grad.addColorStop(1, `rgba(${rgb},0)`);
+    g.strokeStyle = grad; g.lineWidth = w; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(c + Math.cos(a) * c * 0.17, c + Math.sin(a) * c * 0.17); g.lineTo(c + Math.cos(a) * len, c + Math.sin(a) * len); g.stroke();
+  }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function ringTexture(rgb, inner, width) {
+  const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'); const c = S / 2;
+  const grad = g.createRadialGradient(c, c, 0, c, c, c);
+  grad.addColorStop(0, `rgba(${rgb},0)`); grad.addColorStop(inner - 0.01, `rgba(${rgb},0)`); grad.addColorStop(inner, `rgba(${rgb},1)`);
+  grad.addColorStop(inner + width, `rgba(${rgb},0.35)`); grad.addColorStop(Math.min(1, inner + width * 2.5), `rgba(${rgb},0)`); grad.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = grad; g.fillRect(0, 0, S, S);
+  return new THREE.CanvasTexture(cv);
+}
 const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (t) => t * t * (3 - 2 * t);
 const clamp01 = (t) => Math.min(1, Math.max(0, t));
@@ -83,6 +110,17 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   planet.add(new THREE.Mesh(new THREE.SphereGeometry(0.34, 48, 48), new THREE.MeshStandardMaterial({ color: 0x060606, roughness: 0.95, metalness: 0.05 })));
   planet.add(new THREE.Mesh(new THREE.SphereGeometry(0.352, 48, 48), rimMaterial(0xff3b2e)));
   scene.add(planet);
+
+  /* ----- Eclipse props ----- */
+  const LOOK = new URLSearchParams(location.search).get('eclipse') || 'red';     // red | white | bare
+  const coronaRGB = LOOK === 'red' ? '255,90,80' : '255,236,228';
+  const eCorona = new THREE.Sprite(new THREE.SpriteMaterial({ map: coronaTexture(coronaRGB), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, opacity: 0 }));
+  eCorona.scale.setScalar(SUN_R * 7); eCorona.position.set(0, 0, -0.3); scene.add(eCorona);
+  const chromo = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTexture('255,120,90', 0.47, 0.025), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, opacity: 0 }));
+  chromo.scale.setScalar(SUN_R * 2.3); chromo.position.set(0, 0, -0.2); scene.add(chromo);
+  const diamond = new THREE.Sprite(new THREE.SpriteMaterial({ map: spriteTexture('rgba(255,250,240,1)', 'rgba(255,200,170,0.5)'), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, opacity: 0 }));
+  diamond.scale.setScalar(SUN_R * 0.9); scene.add(diamond);
+  if (LOOK !== 'bare') { planet.children[1].material.uniforms.uColor.value.set(0x2a0608); }
 
   /* ----- Catalog: a disk of candidate rows (method) ----- */
   const N = small ? 2200 : 4800;
@@ -284,17 +322,30 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
       planet.visible = sA > 0 && sA < 1;
     } else if (section === 'hero' && p >= 0.36) {
       const eb = sB * sB * (3 - 2 * sB);
-      fwd.copy(cam.look).sub(cam.pos).normalize();
+      fwd.copy(cam.pos).negate().normalize();                            // lens → star centre
       right.crossVectors(fwd, UP).normalize();
-      const dp = lerp(1.25, 1.05, eb);                                   // distance in front of the lens
+      const dp = 0.152 * cam.pos.length();                               // apparent size ≈ 1.1× the star
       const off = lerp(-1.15, 0, eb);                                    // lateral offset, left edge to centre
       planet.position.copy(cam.pos).addScaledVector(fwd, dp).addScaledVector(right, off);
       planet.visible = true;
       covered = clamp01(1 - Math.abs(off) / 0.35);                       // the corona flares as it closes
+      if (LOOK !== 'bare') {
+        const near = clamp01(1 - Math.abs(off) / 0.22);                  // last fifth of the slide
+        eCorona.material.opacity = near * near * 0.8;
+        eCorona.material.rotation = time * 0.01;
+        eCorona.scale.setScalar(SUN_R * lerp(5, 7.5, near));
+        chromo.material.opacity = clamp01(1 - Math.abs(off) / 0.06);
+        // Baily's bead at the last sliver, on the side the planet has not yet reached
+        const bead = clamp01(1 - Math.abs(off) / 0.09) * clamp01(Math.abs(off) / 0.02);
+        diamond.material.opacity = bead;
+        diamond.position.copy(right).multiplyScalar(SUN_R * 0.96 * Math.sign(-off || 1));
+        diamond.scale.setScalar(SUN_R * lerp(0.4, 1.0, bead));
+      }
     } else {
       planet.visible = false;
+      eCorona.material.opacity = chromo.material.opacity = diamond.material.opacity = 0;
     }
-    bloom.strength = lerp(1.0, 1.3, covered) * (1 - dim * 0.5) * (1 - dark);   // the corona flares at totality
+    bloom.strength = lerp(1.0, LOOK === 'bare' ? 1.3 : 1.15, covered) * (1 - dim * 0.5) * (1 - dark);
 
     // Method: the sweep classifies the catalog
     const sweepTarget = section === 'method' ? lerp(5.5, 17.5, clamp01((progress - 0.12) / 0.75)) : (section === 'hero' ? 0 : 17.5);

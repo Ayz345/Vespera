@@ -26,7 +26,7 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
       world && world.set('hero', p);                                // the planet sits in front of the star around 45%
       gsap.set(copy, { opacity: Math.max(0, 1 - p * 3), y: p * -80 });
       note.classList.toggle('is-on', p > 0.1 && p < 0.3);
-      const d = smoothstep(0.505, 0.54, p);                         // totality at 0.52
+      const d = smoothstep(0.515, 0.55, p);                         // totality at 0.52, hold the ring a beat
       setDark(d);
       dark.style.opacity = smoothstep(0.55, 0.68, p).toFixed(3);    // the strip surfaces in the dark
       dark.classList.toggle('is-on', p > 0.55);
