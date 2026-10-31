@@ -168,13 +168,21 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
     res.addEventListener('pointerdown', (e) => { if (inHud(e)) return; e.preventDefault(); dragging = true; lx = e.clientX; ly = e.clientY; res.classList.add('is-dragging'); });
     addEventListener('pointermove', (e) => { if (!dragging || !world) return; world.turnResults((e.clientX - lx) * 0.0035, (e.clientY - ly) * 0.0025); lx = e.clientX; ly = e.clientY; });
     addEventListener('pointerup', () => { dragging = false; res.classList.remove('is-dragging'); });
+    // The wheel scrolls the page until the cloud is engaged: a click or drag on it locks the wheel to
+    // zoom, leaving the scene (or Escape) releases it. Ctrl + wheel and the +/- buttons always zoom.
+    let locked = false;
+    const setLock = (on) => { locked = on; res.classList.toggle('is-locked', on); };
+    res.addEventListener('pointerdown', (e) => { if (!inHud(e)) setLock(true); });
+    res.addEventListener('pointerleave', () => setLock(false));
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') setLock(false); });
     res.addEventListener('wheel', (e) => {
-      if (inHud(e) || !resultsEntry || !world) return;
-      const y = window.scrollY;
-      if (y < resultsEntry.st.start - 5 || y > resultsEntry.st.end + 5) return;      // only while the scene is pinned; the panel side still scrolls
+      if (inHud(e) || !world) return;
+      if (!e.ctrlKey && !locked) return;
       e.preventDefault();
-      world.zoomResults(Math.exp(e.deltaY * 0.0012));     // wheel up = closer
+      world.zoomResults(Math.exp(e.deltaY * (e.ctrlKey ? 0.004 : 0.0012)));
     }, { passive: false });
+    document.getElementById('zoom-in')?.addEventListener('click', () => world && world.zoomResults(0.78));
+    document.getElementById('zoom-out')?.addEventListener('click', () => world && world.zoomResults(1.28));
   }
 
   /* ----- Headings and reveals outside the pinned scenes ----- */

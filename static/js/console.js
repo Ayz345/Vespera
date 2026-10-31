@@ -130,7 +130,7 @@ export function setupConsole({ reducedMotion = false, world = null } = {}) {
     map.hidden = false;
     const info = world ? world.setResults(r) : null;
     const note = document.getElementById('map-note');
-    if (note) note.textContent = (info && !info.wide ? `the field is opened ${info.angleScale.toFixed(1)}× wider than it is on the sky · ` : '') + 'distance from Earth on a log scale · drag the cloud to turn · wheel over it to zoom';
+    if (note) note.textContent = (info && !info.wide ? `the field is opened ${info.angleScale.toFixed(1)}× wider than it is on the sky · ` : '') + 'distance from Earth on a log scale · drag to turn · click the cloud, then wheel to zoom · esc to release';
     reveal();
   }
   function showCompare(r) {
