@@ -26,7 +26,7 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
       world && world.set('hero', p);                                // the planet sits in front of the star around 45%
       gsap.set(copy, { opacity: Math.max(0, 1 - p * 3), y: p * -80 });
       note.classList.toggle('is-on', p > 0.14 && p < 0.4);
-      const d = smoothstep(0.47, 0.55, p);                          // the planet has filled the frame by 0.52
+      const d = smoothstep(0.495, 0.535, p);                        // totality at 0.496, the frame is full by 0.52
       setDark(d);
       dark.style.opacity = smoothstep(0.55, 0.68, p).toFixed(3);    // the strip surfaces in the dark
       dark.classList.toggle('is-on', p > 0.55);
@@ -109,12 +109,24 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
   }
 
   /* ----- Console and team: the world recedes ----- */
-  ScrollTrigger.create({ trigger: '#console', start: 'top bottom', end: 'bottom top', onUpdate: (self) => world && world.set('console', self.progress) });
+  {
+    const title = document.getElementById('console-title');
+    const grid = document.querySelector('.console__grid');
+    const top = document.querySelector('.console__top');
+    pinned('console', '120%', (self) => {
+      const p = self.progress;
+      world && world.set('console', p);
+      show(title, p > 0.08);
+      grid.classList.toggle('is-in', p > 0.12);
+      top.classList.toggle('is-in', p > 0.08);
+    });
+  }
+  ScrollTrigger.create({ trigger: '#results', start: 'top 60%', end: 'bottom 40%', onUpdate: (self) => { if (world && !document.getElementById('results').hidden) world.set('results', self.progress); } });
   ScrollTrigger.create({ trigger: '#team', start: 'top bottom', end: 'bottom top', onUpdate: (self) => world && world.set('team', self.progress) });
 
   /* ----- Headings and reveals outside the pinned scenes ----- */
-  ScrollTrigger.batch('#console-title, #team-title', { start: 'top 85%', onEnter: (els) => els.forEach((el) => el.classList.add('is-in')), once: true });
-  document.querySelectorAll('.console__head, .team__copy').forEach((el) => el.setAttribute('data-reveal', ''));
+  ScrollTrigger.batch('#team-title', { start: 'top 85%', onEnter: (els) => els.forEach((el) => el.classList.add('is-in')), once: true });
+  document.querySelectorAll('.team__copy').forEach((el) => el.setAttribute('data-reveal', ''));
   ScrollTrigger.batch('[data-reveal]', { start: 'top 88%', onEnter: (els) => els.forEach((el, i) => setTimeout(() => el.classList.add('is-in'), i * 90)), once: true });
   ScrollTrigger.create({ trigger: '#footer-word', start: 'top 95%', onEnter: () => document.getElementById('footer-word').classList.add('is-in'), once: true });
 

@@ -146,7 +146,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   /* ----- Camera targets ----- */
   const cam = { pos: new THREE.Vector3(0.6, 0.5, 8.6), look: new THREE.Vector3(0, 0.2, 0), fov: 42 };
   const target = { pos: cam.pos.clone(), look: cam.look.clone(), fov: 42 };
-  let section = 'hero', progress = 0, dim = 0, dark = 0, orbitT = 0;
+  let section = 'hero', progress = 0, dim = 0, dark = 0, orbitT = 0, orbitTime = 0;
 
   // Camera keyframes. Each section's last key equals the next section's first key,
   // so the camera never moves on its own between pinned scenes.
@@ -168,11 +168,12 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
       { t: 1, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0 },
     ],
     console: [
-      { t: 0, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0.15 },
-      { t: 1, pos: [-2, 4, 38], look: [0, 0, 0], fov: 44, dim: 0.65 },
+      { t: 0, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0 },
+      { t: 0.35, pos: [0, 5.5, 9.5], look: [0, 0, 0], fov: 42, dim: 0.4 },
+      { t: 1, pos: [0, 5.5, 9.5], look: [0, 0, 0], fov: 42, dim: 0.4 },
     ],
     team: [
-      { t: 0, pos: [-2, 4, 38], look: [0, 0, 0], fov: 44, dim: 0.65 },
+      { t: 0, pos: [0, 5.5, 9.5], look: [0, 0, 0], fov: 44, dim: 0.65 },
       { t: 1, pos: [3, 3, 48], look: [0, 0, 0], fov: 44, dim: 0.7 },
     ],
   };
@@ -187,6 +188,13 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   }
   function set(name, p) {
     section = name; progress = clamp01(p);
+    if (name === 'results') {
+      // Circle the result cloud; scroll and time both turn it
+      const a = progress * 1.6 + orbitTime * 0.06 + 0.6, R = results.radius * 2.3;
+      target.pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.35, results.center.z + Math.cos(a) * R);
+      target.look.copy(results.center); target.fov = 44; dim = 0;
+      return;
+    }
     if (name === 'missions') {
       // Orbit the sky sphere. Starts where method ends, ends where zone starts.
       const t = smooth(progress);
@@ -198,23 +206,44 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     keyAt(KF[name] || KF.hero, progress);
   }
 
+  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1 };
   function setResults({ pointscand = [], pointsconf = [] }) {
-    const all = [...pointsconf.map((p) => ({ ...p, kind: 'conf' })), ...pointscand.map((p) => ({ ...p, kind: 'cand' }))];
-    if (!all.length) return;
-    const dists = all.map((p) => Math.hypot(p.x, p.y, p.z)).sort((a, b) => a - b);
-    const p90 = dists[Math.floor(dists.length * 0.9)] || 1, k = 16 / p90;
-    const n = all.length, ps = new Float32Array(n * 3), cs = new Float32Array(n * 3);
-    all.forEach((p, i) => {
-      ps[i * 3] = p.x * k; ps[i * 3 + 1] = p.z * k; ps[i * 3 + 2] = -p.y * k;
-      const hab = p.Habitability === 'Habitable';
-      const c = p.kind === 'cand' ? (hab ? LIME : RED) : (hab ? new THREE.Color(0xf2f0ec) : GREY);
-      cs[i * 3] = c.r; cs[i * 3 + 1] = c.g; cs[i * 3 + 2] = c.b;
+    const D2R = Math.PI / 180;
+    const all = [...pointsconf.map((p) => ({ ...p, kind: 'conf' })), ...pointscand.map((p) => ({ ...p, kind: 'cand' }))].filter((p) => p.dist > 0);
+    if (!all.length) return results;
+    // Mean direction of the field and its angular extent
+    let mx = 0, my = 0, mz = 0;
+    all.forEach((p) => { const ra = p.ra * D2R, dec = p.dec * D2R; mx += Math.cos(dec) * Math.cos(ra); my += Math.cos(dec) * Math.sin(ra); mz += Math.sin(dec); });
+    const nn = Math.hypot(mx, my, mz) || 1; mx /= nn; my /= nn; mz /= nn;
+    const dec0 = Math.asin(mz), ra0 = Math.atan2(my, mx);
+    let maxOff = 0;
+    const offs = all.map((p) => {
+      let dra = p.ra * D2R - ra0; while (dra > Math.PI) dra -= 2 * Math.PI; while (dra < -Math.PI) dra += 2 * Math.PI;
+      const u = dra * Math.cos(p.dec * D2R), v = p.dec * D2R - dec0;
+      maxOff = Math.max(maxOff, Math.hypot(u, v)); return [u, v];
     });
+    const wide = maxOff > 0.6;
+    const angleScale = wide ? 1 : Math.min(8, 0.55 / Math.max(maxOff, 0.01));
+    const radius = (d) => 6 + Math.log10(1 + d / 10) * 14;
+    const n = all.length, ps = new Float32Array(n * 3), cs = new Float32Array(n * 3);
+    const c = new THREE.Vector3(); let far = 0;
+    all.forEach((p, i) => {
+      const [u, v] = offs[i];
+      const r = radius(p.dist), ang = Math.hypot(u, v) * angleScale, phi = Math.atan2(v, u);
+      const x = r * Math.sin(ang) * Math.cos(phi), y = r * Math.sin(ang) * Math.sin(phi), z = -r * Math.cos(ang);
+      ps[i * 3] = x; ps[i * 3 + 1] = y; ps[i * 3 + 2] = z; c.x += x; c.y += y; c.z += z; far = Math.max(far, r);
+      const hab = p.Habitability === 'Habitable';
+      const col = p.kind === 'cand' ? (hab ? LIME : RED) : (hab ? new THREE.Color(0xf2f0ec) : GREY);
+      cs[i * 3] = col.r; cs[i * 3 + 1] = col.g; cs[i * 3 + 2] = col.b;
+    });
+    c.divideScalar(n);
     catalog.geometry.dispose();
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(ps, 3));
     g.setAttribute('color', new THREE.BufferAttribute(cs, 3));
     catalog.geometry = g; catalog.userData.real = true;
+    results.center.copy(c); results.radius = Math.max(8, far * 0.75); results.wide = wide; results.angleScale = angleScale;
+    return results;
   }
 
   function resize() {
@@ -233,6 +262,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     requestAnimationFrame(frame);
     if (!visible) return;
     const time = clock.getElapsedTime();
+    if (section === 'results' && !reducedMotion) { orbitTime = time; set('results', progress); }
     sunMat.uniforms.uTime.value = reducedMotion ? 0 : time;
     sun.rotation.y = reducedMotion ? 0 : time * 0.02;
 
@@ -243,18 +273,20 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     // Hero: the planet crosses in front of the star, between the camera and the sun
     // The planet comes in from the left, crosses the star, then flies at the camera until it fills the view.
     // Stage 1: a classic transit, left to the centre of the star's disc.
-    // Stage 2: from there straight at the lens, until the planet fills the frame.
+    // Stage 2: along the line from the star to the lens, dead centre, until it covers the
+    // star exactly (totality, the corona shows as a ring) and then the whole frame.
     const e = section === 'hero' ? clamp01((progress - 0.06) / 0.46) : 0;
     const s1 = clamp01(e / 0.5), s2 = clamp01((e - 0.5) / 0.5);
     const ease1 = s1 * (2 - s1), ease2 = s2 * s2;
-    tmp.copy(cam.look).sub(cam.pos).normalize();                      // camera forward
-    const B = tmp.multiplyScalar(0.40).add(cam.pos);                  // just in front of the lens
-    const fx = lerp(-6.5, 0, ease1), fy = 0.15, fz = 2.6;              // in front of the star
-    planet.position.set(lerp(fx, B.x, ease2), lerp(fy, B.y, ease2), lerp(fz, B.z, ease2));
+    const k = lerp(0.3, 0.965, ease2);                                   // fraction of the way to the lens
+    tmp.copy(cam.pos).multiplyScalar(k);                                 // star is at the origin
+    const fx = lerp(-6.5, 0, ease1), fy = 0.1, fz = 2.6;
+    const join = clamp01(s2 / 0.2);
+    planet.position.set(lerp(fx, tmp.x, join), lerp(fy, tmp.y, join), lerp(fz, tmp.z, join));
     planet.visible = section === 'hero' && e > 0;
-    // Star dims as the planet covers it
-    const covered = clamp01((s2 - 0.55) / 0.3);
-    bloom.strength = lerp(1.0, 0.5, covered) * (1 - dim * 0.5) * (1 - dark);
+    // Totality: the planet's disc just exceeds the star's when k ≈ 0.83
+    const covered = clamp01((k - 0.80) / 0.06);
+    bloom.strength = lerp(1.0, 1.3, covered) * (1 - dim * 0.5) * (1 - dark);   // the corona flares at totality
 
     // Method: the sweep classifies the catalog
     const sweepTarget = section === 'method' ? lerp(5.5, 17.5, clamp01((progress - 0.12) / 0.75)) : (section === 'hero' ? 0 : 17.5);
@@ -273,9 +305,10 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     }
     sweep.scale.setScalar(Math.max(0.01, sweepTarget / 6));
     sweep.material.opacity = section === 'method' && progress > 0.1 && progress < 0.9 ? 0.6 : 0;
-    catalog.rotation.y = reducedMotion ? 0 : time * 0.02;
-    catMat.opacity = (section === 'hero' ? 0.35 : (1 - dim * 0.6)) * (1 - dark);
-    catMat.size = catalog.userData.real ? 0.22 : 0.16;
+    catalog.rotation.y = catalog.userData.real || reducedMotion ? 0 : time * 0.02;
+    catMat.opacity = (section === 'hero' ? 0.35 : section === 'console' && !catalog.userData.real ? 0.45 : (1 - dim * 0.6)) * (1 - dark);
+    sun.visible = corona.visible = !(section === 'results' && results.radius > 30 && false);
+    catMat.size = catalog.userData.real ? 0.5 : 0.16;
 
     // Missions: the sky and its fields
     const inSky = section === 'missions';

@@ -153,87 +153,84 @@
       </div>
     </section>
 
-    <!-- ================= CONSOLE ================= -->
-    <section class="console" id="console" aria-labelledby="console-title">
-      <div class="wrap">
-        <div class="console__head">
-          <h2 class="section-title" id="console-title" data-split><span class="line"><span>Run it on</span></span> <span class="line"><span>a real table</span></span></h2>
+    <!-- ================= CONSOLE: the aperture ================= -->
+    <section class="scene console" id="console" aria-labelledby="console-title">
+      <div class="scene__stage console__stage">
+        <div class="wrap console__top">
+          <h2 class="console__title" id="console-title" data-split><span class="line"><span>Run it on a real table</span></span></h2>
+          <p class="hud-label console__sub">your rows train the model · a few seconds · runs on our server</p>
         </div>
+        <form class="wrap console__grid" id="run-form" novalidate>
+          <fieldset class="opts opts--left">
+            <legend class="hud-label"><span>01</span> mission</legend>
+            <label class="opt"><input type="radio" name="dataset" value="kepler" checked><span class="opt__name">Kepler</span><span class="opt__sub hud-label">one field · 8 features</span></label>
+            <label class="opt"><input type="radio" name="dataset" value="k2"><span class="opt__name">K2</span><span class="opt__sub hud-label">ecliptic · 5 features</span></label>
+            <label class="opt"><input type="radio" name="dataset" value="tess"><span class="opt__name">TESS</span><span class="opt__sub hud-label">whole sky · 9 features</span></label>
+          </fieldset>
 
-        <form class="launch" id="run-form" novalidate>
-          <div class="launch__row" data-reveal>
-          <div class="launch__step">
-            <p class="hud-label launch__label"><span>01</span> Mission</p>
-            <div class="tiles tiles--3" role="radiogroup" aria-label="Mission">
-              <label class="tile"><input type="radio" name="dataset" value="kepler" checked><span class="tile__name">Kepler</span><span class="tile__sub hud-label">8 features</span></label>
-              <label class="tile"><input type="radio" name="dataset" value="k2"><span class="tile__name">K2</span><span class="tile__sub hud-label">5 features</span></label>
-              <label class="tile"><input type="radio" name="dataset" value="tess"><span class="tile__name">TESS</span><span class="tile__sub hud-label">9 features</span></label>
-            </div>
-          </div>
-
-          <div class="launch__step">
-            <p class="hud-label launch__label"><span>02</span> Model</p>
-            <div class="tiles tiles--5" role="radiogroup" aria-label="Model">
-              <label class="tile"><input type="radio" name="model_choice" value="logreg"><span class="tile__name">Logistic</span><span class="tile__sub hud-label">linear · fast</span></label>
-              <label class="tile"><input type="radio" name="model_choice" value="rf" checked><span class="tile__name">Forest</span><span class="tile__sub hud-label">trees voting</span></label>
-              <label class="tile"><input type="radio" name="model_choice" value="svm"><span class="tile__name">SVM</span><span class="tile__sub hud-label">widest margin</span></label>
-              <label class="tile"><input type="radio" name="model_choice" value="xgb"><span class="tile__name">XGBoost</span><span class="tile__sub hud-label">boosted trees</span></label>
-              <label class="tile tile--all"><input type="radio" name="model_choice" value="all"><span class="tile__name">All four</span><span class="tile__sub hud-label">compare · rank</span></label>
-            </div>
-          </div>
-          </div>
-
-          <div class="launch__step" data-reveal>
-            <p class="hud-label launch__label"><span>03</span> Table</p>
-            <label class="drop" id="drop">
+          <div class="aperture-wrap">
+            <label class="aperture" id="drop">
               <input type="file" id="file" name="file" accept=".csv,text/csv">
-              <span class="drop__big" id="drop-name">Drop the CSV</span>
-              <span class="drop__meta hud-label" id="drop-hint">archive export · values only · no errors · or click to choose</span>
-              <span class="drop__corner drop__corner--tl" aria-hidden="true"></span><span class="drop__corner drop__corner--tr" aria-hidden="true"></span><span class="drop__corner drop__corner--bl" aria-hidden="true"></span><span class="drop__corner drop__corner--br" aria-hidden="true"></span>
+              <span class="aperture__ring aperture__ring--outer" aria-hidden="true"></span>
+              <span class="aperture__ring aperture__ring--inner" aria-hidden="true"></span>
+              <span class="aperture__tick aperture__tick--n" aria-hidden="true"></span><span class="aperture__tick aperture__tick--s" aria-hidden="true"></span><span class="aperture__tick aperture__tick--e" aria-hidden="true"></span><span class="aperture__tick aperture__tick--w" aria-hidden="true"></span>
+              <span class="aperture__text">
+                <span class="hud-label aperture__step"><span>03</span> table</span>
+                <span class="drop__big" id="drop-name">Drop the CSV</span>
+                <span class="hud-label drop__meta" id="drop-hint">archive export · values only · no errors · or click</span>
+              </span>
             </label>
+            <button class="launch__run" type="submit" id="run-btn" data-magnetic>
+              <span class="launch__fill" id="run-fill" aria-hidden="true"></span>
+              <span class="launch__text"><span class="btn__label" id="run-label">Run the model</span><span class="hud-label" id="run-status" aria-live="polite">trains on your rows</span></span>
+              <span class="launch__arrow" aria-hidden="true">→</span>
+            </button>
           </div>
 
-          <button class="launch__run" type="submit" id="run-btn" data-reveal>
-            <span class="launch__fill" id="run-fill" aria-hidden="true"></span>
-            <span class="launch__text"><span class="btn__label" id="run-label">Run the model</span><span class="hud-label" id="run-status" aria-live="polite">trains on your rows · a few seconds</span></span>
-            <span class="launch__arrow" aria-hidden="true">→</span>
-          </button>
+          <fieldset class="opts opts--right">
+            <legend class="hud-label"><span>02</span> model</legend>
+            <label class="opt"><input type="radio" name="model_choice" value="logreg"><span class="opt__name">Logistic</span><span class="opt__sub hud-label">linear · fast</span></label>
+            <label class="opt"><input type="radio" name="model_choice" value="rf" checked><span class="opt__name">Forest</span><span class="opt__sub hud-label">trees voting</span></label>
+            <label class="opt"><input type="radio" name="model_choice" value="svm"><span class="opt__name">SVM</span><span class="opt__sub hud-label">widest margin</span></label>
+            <label class="opt"><input type="radio" name="model_choice" value="xgb"><span class="opt__name">XGBoost</span><span class="opt__sub hud-label">boosted trees</span></label>
+            <label class="opt opt--all"><input type="radio" name="model_choice" value="all"><span class="opt__name">All four</span><span class="opt__sub hud-label">compare · rank</span></label>
+          </fieldset>
         </form>
-
+      </div>
+      <div class="wrap">
         <section class="results" id="results" hidden aria-live="polite" aria-labelledby="results-title">
-          <div class="results__head">
-            <h3 id="results-title">Results</h3>
-            <p class="hud-label" id="results-sub"></p>
-          </div>
-          <div class="results__grid" id="results-classify">
-            <div class="stat stat--big"><span class="stat__v"><span id="r-acc">0</span>%</span><span class="hud-label">accuracy, held-out rows</span></div>
-            <div class="stat"><span class="stat__v" id="r-cand">0</span><span class="hud-label">candidates scored</span></div>
-            <div class="stat"><span class="stat__v" id="r-planets">0</span><span class="hud-label">predicted planets</span></div>
-            <div class="stat stat--hab"><span class="stat__v" id="r-hab">0</span><span class="hud-label">in the habitable window</span></div>
-            <div class="matrix" aria-label="Confusion matrix">
-              <span class="hud-label">confusion matrix</span>
-              <div class="matrix__grid">
-                <span class="matrix__corner"></span><span class="matrix__h">pred. FP</span><span class="matrix__h">pred. planet</span>
-                <span class="matrix__h">true FP</span><span class="matrix__c" id="m00">0</span><span class="matrix__c" id="m01">0</span>
-                <span class="matrix__h">true planet</span><span class="matrix__c" id="m10">0</span><span class="matrix__c" id="m11">0</span>
+          <div class="results__hud">
+            <div class="results__head">
+              <h3 id="results-title">Results</h3>
+              <p class="hud-label" id="results-sub"></p>
+            </div>
+            <div class="results__grid" id="results-classify">
+              <div class="stat stat--big"><span class="stat__v"><span id="r-acc">0</span>%</span><span class="hud-label">accuracy, held-out rows</span></div>
+              <div class="stat"><span class="stat__v" id="r-cand">0</span><span class="hud-label">candidates scored</span></div>
+              <div class="stat"><span class="stat__v" id="r-planets">0</span><span class="hud-label">predicted planets</span></div>
+              <div class="stat stat--hab"><span class="stat__v" id="r-hab">0</span><span class="hud-label">in the habitable window</span></div>
+              <div class="matrix" aria-label="Confusion matrix">
+                <span class="hud-label">confusion matrix</span>
+                <div class="matrix__grid">
+                  <span class="matrix__corner"></span><span class="matrix__h">pred. FP</span><span class="matrix__h">pred. planet</span>
+                  <span class="matrix__h">true FP</span><span class="matrix__c" id="m00">0</span><span class="matrix__c" id="m01">0</span>
+                  <span class="matrix__h">true planet</span><span class="matrix__c" id="m10">0</span><span class="matrix__c" id="m11">0</span>
+                </div>
               </div>
+              <ul class="downloads" id="downloads"></ul>
             </div>
-            <ul class="downloads" id="downloads"></ul>
-          </div>
-          <div class="results__grid results__grid--compare" id="results-compare" hidden>
-            <ol class="ranking" id="ranking"></ol>
-          </div>
-          <div class="map" id="map" hidden>
-            <div class="map__head">
-              <div><h3>Where they are</h3><p class="hud-label map__note" id="map-note"></p></div>
-              <ul class="legend">
-                <li><i style="--c:#c8ff3d"></i>candidate · habitable</li>
-                <li><i style="--c:#ff3b4e"></i>candidate</li>
-                <li><i style="--c:#f2f0ec"></i>confirmed · habitable</li>
-                <li><i style="--c:#6e6a64"></i>confirmed</li>
-              </ul>
+            <div class="results__grid results__grid--compare" id="results-compare" hidden>
+              <ol class="ranking" id="ranking"></ol>
             </div>
-            <div class="map__view" id="map-view" role="img" aria-label="3D scatter plot of planet positions around the Sun"></div>
+          </div>
+          <div class="map" id="map" hidden aria-hidden="true">
+            <p class="hud-label map__note" id="map-note"></p>
+            <ul class="legend">
+              <li><i style="--c:#c8ff3d"></i>candidate · habitable</li>
+              <li><i style="--c:#ff3b4e"></i>candidate</li>
+              <li><i style="--c:#f2f0ec"></i>confirmed · habitable</li>
+              <li><i style="--c:#6e6a64"></i>confirmed</li>
+            </ul>
           </div>
         </section>
       </div>

@@ -1,5 +1,4 @@
 // The launch sequence: pick a mission, pick a model (or all four), drop a table, run.
-import { renderMap } from './map3d.js';
 
 export function setupConsole({ reducedMotion = false, world = null } = {}) {
   const form = document.getElementById('run-form');
@@ -53,6 +52,7 @@ export function setupConsole({ reducedMotion = false, world = null } = {}) {
   function setBusy(on, text) {
     runBtn.disabled = on;
     runBtn.classList.toggle('is-busy', on);
+    form.classList.toggle('is-busy', on);
     status.classList.remove('is-error');
     if (on) {
       runLabel.textContent = text;
@@ -124,11 +124,10 @@ export function setupConsole({ reducedMotion = false, world = null } = {}) {
       ['Performance report', 'TXT · matrix and class report', r.files.report],
     ].map(([t, s, f]) => `<li><a href="/results/${encodeURIComponent(f)}" download>${dlIcon}<span><strong>${t}</strong><small>${s}</small></span></a></li>`).join('');
     map.hidden = false;
-    reveal();
-    const info = renderMap(document.getElementById('map-view'), r, { reducedMotion });
+    const info = world ? world.setResults(r) : null;
     const note = document.getElementById('map-note');
-    if (note) note.textContent = (info && !info.wide ? `a ${info.angleScale.toFixed(1)}× wider view of the field · ` : '') + 'distance from the Sun on a log scale · ticks at 10, 100 and 1 000 pc · drag to orbit';
-    if (world) world.setResults(r);
+    if (note) note.textContent = (info && !info.wide ? `the field is opened ${info.angleScale.toFixed(1)}× wider than it is on the sky · ` : '') + 'distance from the Sun on a log scale · scroll turns the view';
+    reveal();
   }
   function showCompare(r) {
     gridClassify.hidden = true; gridCompare.hidden = false; map.hidden = true;
