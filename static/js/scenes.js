@@ -25,8 +25,8 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
       const p = self.progress;
       world && world.set('hero', p);                                // the planet sits in front of the star around 45%
       gsap.set(copy, { opacity: Math.max(0, 1 - p * 3), y: p * -80 });
-      note.classList.toggle('is-on', p > 0.22 && p < 0.46);
-      const d = smoothstep(0.40, 0.52, p);                          // fully dark while the planet is in front
+      note.classList.toggle('is-on', p > 0.14 && p < 0.4);
+      const d = smoothstep(0.47, 0.55, p);                          // the planet has filled the frame by 0.52
       setDark(d);
       dark.style.opacity = smoothstep(0.55, 0.68, p).toFixed(3);    // the strip surfaces in the dark
       dark.classList.toggle('is-on', p > 0.55);
@@ -99,9 +99,11 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
     pinned('zone', '240%', (self) => {
       const p = self.progress;
       world && world.set('zone', p);
-      show(title, p > 0.16);                                   // the camera has arrived by 0.3
-      show(gauges, p > 0.24); show(verdictEl, p > 0.3); show(readout, p > 0.3);
-      render(smoothstep(0.3, 1, p));                           // the planet moves only once we are there
+      show(title, p > 0.06);                                   // the camera dashes in over the first 10%
+      show(gauges, p > 0.1); show(verdictEl, p > 0.12); show(readout, p > 0.12);
+      const t = smoothstep(0.14, 1, p);                        // the planet moves only once we are there
+      world && world.setOrbit(t);
+      render(t);
     });
     render(0);
   }

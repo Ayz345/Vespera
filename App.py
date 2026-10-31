@@ -170,8 +170,11 @@ def to_cartesian(df, dataset):
     y = dist * np.cos(dec) * np.sin(ra)
     z = dist * np.sin(dec)
     points = []
-    for name, xx, yy, zz, Habitability in zip(df[name_col], x, y, z, df['habitable_prediction']):
-        points.append({"name": str(name), "x": float(xx), "y": float(yy), "z": float(zz),"Habitability":str(Habitability)})
+    ra_deg = df["ra"].astype(float).values
+    dec_deg = df["dec"].astype(float).values
+    for name, xx, yy, zz, Habitability, r, d, dd in zip(df[name_col], x, y, z, df['habitable_prediction'], ra_deg, dec_deg, dist):
+        points.append({"name": str(name), "x": float(xx), "y": float(yy), "z": float(zz), "Habitability": str(Habitability),
+                       "ra": float(r), "dec": float(d), "dist": float(dd)})
     return points
 DATASETS = {"kepler", "k2", "tess"}
 MODELS = {"logreg": "Logistic regression", "rf": "Random forest", "svm": "Support vector machine", "xgb": "XGBoost"}

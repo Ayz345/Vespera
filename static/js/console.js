@@ -125,7 +125,9 @@ export function setupConsole({ reducedMotion = false, world = null } = {}) {
     ].map(([t, s, f]) => `<li><a href="/results/${encodeURIComponent(f)}" download>${dlIcon}<span><strong>${t}</strong><small>${s}</small></span></a></li>`).join('');
     map.hidden = false;
     reveal();
-    renderMap(document.getElementById('map-view'), r, { reducedMotion });
+    const info = renderMap(document.getElementById('map-view'), r, { reducedMotion });
+    const note = document.getElementById('map-note');
+    if (note) note.textContent = (info && !info.wide ? `a ${info.angleScale.toFixed(1)}× wider view of the field · ` : '') + 'distance from the Sun on a log scale · ticks at 10, 100 and 1 000 pc · drag to orbit';
     if (world) world.setResults(r);
   }
   function showCompare(r) {

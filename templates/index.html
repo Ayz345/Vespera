@@ -52,7 +52,7 @@
     <section class="hero scene" id="hero" aria-label="Introduction">
       <div class="scene__stage hero__stage">
         <div class="hero__copy">
-          <p class="hud-label hero__tag">NASA Space Apps 2025</p>
+          <p class="hud-label hero__tag">Built for the NASA Space Apps Challenge 2025</p>
           <h1 class="hero__title" data-split>
             <span class="line"><span>Worlds</span></span>
             <span class="line"><span>hiding in</span></span>
@@ -161,16 +161,17 @@
         </div>
 
         <form class="launch" id="run-form" novalidate>
-          <div class="launch__step" data-reveal>
+          <div class="launch__row" data-reveal>
+          <div class="launch__step">
             <p class="hud-label launch__label"><span>01</span> Mission</p>
             <div class="tiles tiles--3" role="radiogroup" aria-label="Mission">
-              <label class="tile"><input type="radio" name="dataset" value="kepler" checked><span class="tile__name">Kepler</span><span class="tile__sub hud-label">one field · 8 features</span></label>
-              <label class="tile"><input type="radio" name="dataset" value="k2"><span class="tile__name">K2</span><span class="tile__sub hud-label">ecliptic · 5 features</span></label>
-              <label class="tile"><input type="radio" name="dataset" value="tess"><span class="tile__name">TESS</span><span class="tile__sub hud-label">whole sky · 9 features</span></label>
+              <label class="tile"><input type="radio" name="dataset" value="kepler" checked><span class="tile__name">Kepler</span><span class="tile__sub hud-label">8 features</span></label>
+              <label class="tile"><input type="radio" name="dataset" value="k2"><span class="tile__name">K2</span><span class="tile__sub hud-label">5 features</span></label>
+              <label class="tile"><input type="radio" name="dataset" value="tess"><span class="tile__name">TESS</span><span class="tile__sub hud-label">9 features</span></label>
             </div>
           </div>
 
-          <div class="launch__step" data-reveal>
+          <div class="launch__step">
             <p class="hud-label launch__label"><span>02</span> Model</p>
             <div class="tiles tiles--5" role="radiogroup" aria-label="Model">
               <label class="tile"><input type="radio" name="model_choice" value="logreg"><span class="tile__name">Logistic</span><span class="tile__sub hud-label">linear · fast</span></label>
@@ -180,13 +181,14 @@
               <label class="tile tile--all"><input type="radio" name="model_choice" value="all"><span class="tile__name">All four</span><span class="tile__sub hud-label">compare · rank</span></label>
             </div>
           </div>
+          </div>
 
           <div class="launch__step" data-reveal>
             <p class="hud-label launch__label"><span>03</span> Table</p>
             <label class="drop" id="drop">
               <input type="file" id="file" name="file" accept=".csv,text/csv">
               <span class="drop__big" id="drop-name">Drop the CSV</span>
-              <span class="drop__meta hud-label" id="drop-hint">NASA Exoplanet Archive export · values only · no errors · or click to choose</span>
+              <span class="drop__meta hud-label" id="drop-hint">archive export · values only · no errors · or click to choose</span>
               <span class="drop__corner drop__corner--tl" aria-hidden="true"></span><span class="drop__corner drop__corner--tr" aria-hidden="true"></span><span class="drop__corner drop__corner--bl" aria-hidden="true"></span><span class="drop__corner drop__corner--br" aria-hidden="true"></span>
             </label>
           </div>
@@ -223,7 +225,7 @@
           </div>
           <div class="map" id="map" hidden>
             <div class="map__head">
-              <h3>Where they are</h3>
+              <div><h3>Where they are</h3><p class="hud-label map__note" id="map-note"></p></div>
               <ul class="legend">
                 <li><i style="--c:#c8ff3d"></i>candidate · habitable</li>
                 <li><i style="--c:#ff3b4e"></i>candidate</li>
@@ -258,9 +260,21 @@
 
   <footer class="footer">
     <div class="footer__word" id="footer-word" aria-hidden="true">VESPERA</div>
+    <div class="wrap footer__credits">
+      <div>
+        <p class="hud-label">Data</p>
+        <p>This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with the National Aeronautics and Space Administration under the Exoplanet Exploration Program.</p>
+        <p class="footer__refs">Kepler Objects of Interest cumulative table, <a href="https://doi.org/10.26133/NEA4">doi:10.26133/NEA4</a> · K2 Planets and Candidates table, <a href="https://doi.org/10.26133/NEA19">doi:10.26133/NEA19</a> · <a href="https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=TOI">TESS Objects of Interest table</a> · Christiansen et al. 2025, <a href="https://doi.org/10.3847/PSJ/ade3c2">PSJ, doi:10.3847/PSJ/ade3c2</a>.</p>
+      </div>
+      <div>
+        <p class="hud-label">Project</p>
+        <p>Vespera is a student project built for the NASA Space Apps Challenge 2025. It is not affiliated with, operated by or endorsed by NASA, Caltech or IPAC. Kepler, K2 and TESS are NASA missions; their names are used to identify the data.</p>
+        <p class="footer__refs">Source: <a href="https://github.com/Ayz345/Vespera">github.com/Ayz345/Vespera</a> · Predictions are model output, not confirmed discoveries.</p>
+      </div>
+    </div>
     <div class="wrap footer__row">
-      <p class="hud-label">NASA Space Apps 2025 · <a href="https://exoplanetarchive.ipac.caltech.edu/">NASA Exoplanet Archive</a></p>
-      <p class="hud-label"><a href="https://github.com/Ayz345/Vespera">github.com/Ayz345/Vespera</a></p>
+      <p class="hud-label">Ayaz Büyükterzi · Ömer Akhan · Barış Canbolat · Rüzgar Kuşaklı · Orhan Eren Şapcı · Ata Orkun Coşkun</p>
+      <p class="hud-label">2025</p>
     </div>
   </footer>
 

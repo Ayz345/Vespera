@@ -81,7 +81,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   /* ----- Transit planet (hero) ----- */
   const planet = new THREE.Group();
   planet.add(new THREE.Mesh(new THREE.SphereGeometry(0.34, 48, 48), new THREE.MeshStandardMaterial({ color: 0x060606, roughness: 0.95, metalness: 0.05 })));
-  planet.add(new THREE.Mesh(new THREE.SphereGeometry(0.36, 48, 48), rimMaterial(0xff3b2e)));
+  planet.add(new THREE.Mesh(new THREE.SphereGeometry(0.352, 48, 48), rimMaterial(0xff3b2e)));
   scene.add(planet);
 
   /* ----- Catalog: a disk of candidate rows (method) ----- */
@@ -146,7 +146,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   /* ----- Camera targets ----- */
   const cam = { pos: new THREE.Vector3(0.6, 0.5, 8.6), look: new THREE.Vector3(0, 0.2, 0), fov: 42 };
   const target = { pos: cam.pos.clone(), look: cam.look.clone(), fov: 42 };
-  let section = 'hero', progress = 0, dim = 0, dark = 0;
+  let section = 'hero', progress = 0, dim = 0, dark = 0, orbitT = 0;
 
   // Camera keyframes. Each section's last key equals the next section's first key,
   // so the camera never moves on its own between pinned scenes.
@@ -164,7 +164,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     ],
     zone: [
       { t: 0, pos: [-45.9, 6, -3.3], look: [0, 0, 0], fov: 50, dim: 0 },
-      { t: 0.3, pos: [-1, 11, 16], look: [0, 0, 0], fov: 44, dim: 0 },
+      { t: 0.1, pos: [-1, 11, 16], look: [0, 0, 0], fov: 44, dim: 0 },
       { t: 1, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0 },
     ],
     console: [
@@ -241,13 +241,20 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     camera.position.copy(cam.pos); camera.lookAt(cam.look); camera.fov = cam.fov; camera.updateProjectionMatrix();
 
     // Hero: the planet crosses in front of the star, between the camera and the sun
-    const heroP = section === 'hero' ? clamp01((progress - 0.1) / 0.7) : 1;   // in front of the star around p = 0.45
-    const px = lerp(-5.5, 5.5, heroP);
-    planet.position.set(px, 0.15 + Math.sin(heroP * Math.PI) * -0.2, 2.9);
-    planet.visible = section === 'hero';
-    // Star dims slightly during transit, exaggerated so it reads
-    const covered = Math.max(0, 1 - Math.abs(px) / 1.6);
-    bloom.strength = lerp(1.0, 0.6, covered * (section === 'hero' ? 1 : 0)) * (1 - dim * 0.5) * (1 - dark);
+    // The planet comes in from the left, crosses the star, then flies at the camera until it fills the view.
+    // Stage 1: a classic transit, left to the centre of the star's disc.
+    // Stage 2: from there straight at the lens, until the planet fills the frame.
+    const e = section === 'hero' ? clamp01((progress - 0.06) / 0.46) : 0;
+    const s1 = clamp01(e / 0.5), s2 = clamp01((e - 0.5) / 0.5);
+    const ease1 = s1 * (2 - s1), ease2 = s2 * s2;
+    tmp.copy(cam.look).sub(cam.pos).normalize();                      // camera forward
+    const B = tmp.multiplyScalar(0.40).add(cam.pos);                  // just in front of the lens
+    const fx = lerp(-6.5, 0, ease1), fy = 0.15, fz = 2.6;              // in front of the star
+    planet.position.set(lerp(fx, B.x, ease2), lerp(fy, B.y, ease2), lerp(fz, B.z, ease2));
+    planet.visible = section === 'hero' && e > 0;
+    // Star dims as the planet covers it
+    const covered = clamp01((s2 - 0.55) / 0.3);
+    bloom.strength = lerp(1.0, 0.5, covered) * (1 - dim * 0.5) * (1 - dark);
 
     // Method: the sweep classifies the catalog
     const sweepTarget = section === 'method' ? lerp(5.5, 17.5, clamp01((progress - 0.12) / 0.75)) : (section === 'hero' ? 0 : 17.5);
@@ -285,7 +292,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     annulus.material.opacity += (zoneOp * 0.16 - annulus.material.opacity) * 0.08;
     orbitPath.material.opacity += (zoneOp * 0.5 - orbitPath.material.opacity) * 0.08;
     earth.visible = annulus.material.opacity > 0.01;
-    const au = 0.2 + 2.4 * (inZone ? progress : 1);
+    const au = 0.2 + 2.4 * (inZone ? orbitT : 1);
     orbitPath.scale.setScalar(au * AU);
     earth.position.set(Math.cos(-0.7) * au * AU, 0, Math.sin(-0.7) * au * AU);
 
@@ -296,5 +303,6 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   frame();
 
   const setDark = (d) => { dark = clamp01(d); };
-  return { set, setDark, setResults, resize, zoneAU: () => 0.2 + 2.4 * (section === 'zone' ? progress : 1) };
+  const setOrbit = (t) => { orbitT = clamp01(t); };
+  return { set, setDark, setOrbit, setResults, resize };
 }
