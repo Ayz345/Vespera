@@ -1,308 +1,154 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>Exoplanet Management Portal</title>
-		<link rel="icon" type="image/x-icon" href="/static/images/Vespera_logo.jpeg">
-		<style>
-			
-body{
-	margin:0;
-	padding:0;
-	background-image:linear-gradient(to bottom right,rgba(0,0,120,1),rgba(150, 0, 150, 1));
-	background-size: 100%;
-	bottom:0;
-	background-repeat: no-repeat;
-}
+{% extends "base.html" %}
+{% block title %}Exoplanet habitability classifier{% endblock %}
 
-h1{
-	font-family:Arial;
-}
+{% block content %}
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div class="hero__copy">
+      <h1>Find the worlds worth a second look.</h1>
+      <p class="lede">Vespera trains a classifier on NASA's Kepler, K2 and TESS catalogs, scores every unconfirmed candidate in your table, and flags the ones that sit in the habitable zone.</p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="{{ url_for('analyze') }}">Classify a dataset</a>
+        <a class="btn btn--secondary" href="{{ url_for('data') }}">Get NASA data</a>
+      </div>
+      <p class="hero__note">Free to use. Nothing to install. Your file is processed on upload and the results are ready to download.</p>
+    </div>
 
-.top_bar{
-	background-color: rgb(0,0,100);
-	background-image: linear-gradient(to right ,rgba(20,20,20,0.3),rgba(40,40,40,0.15),rgba(0,0,0,0),rgba(191, 129, 224, 0.1),rgba(124, 69, 212, 0.3));
-	height:80px;
-	width:100%;
-	color:white;
-	font-size:18pt;
-	text-align:rigth;
-	position:fixed;
-	top:0;
-	padding: 0;
-	z-index: 1;
-}
-.top_buttons{
-	position:absolute;
-	background-color:rgba(0,0,0,0);
-	height:100%;
-	width:10%;
-	border:none;
-	color:rgb(255,255,255);
-    font-size:13pt;
-	top:0;
-	margin: 0;
-	transition-duration: 0.4s;
-}
-.top_buttons:hover{
-	background-color:rgba(255,255,255,0.2);
-	border-color:rgba(255,255,255,0.2);
-	margin: 0;
-}
-footer{
-	display:inline-block;
-	background-color: rgb(70,0,100);
-	height:15%;
-	width:100%;
-	color:gray;
-	font-size:10pt;
-	font-family: Arial, Helvetica, sans-serif;
-	text-align: center;
-	position: static;
-	bottom: 0;
-	padding-top: 10px;
-	margin: 0;
-	background-image: linear-gradient(to right, rgba(0,0,0,0),rgba(0, 0, 0,0.3 ));
-}
-a{
-	font-family: Arial, Helvetica, sans-serif;
-	font-size: 14pt;
-	color: white;
-	text-decoration: underline;
-}
-a:hover{
-	color: lightgray;
-	text-decoration: none;
-}
-		</style>
-		<style>
-			.box_p{
-    border-color: rgba(255,255,255, 1);
-    border-width: 1px;
-    border-radius: 10px;
-    background-color: rgba(255,255,255, 0.2);
-    width: 60%;
-    padding: 20px;
-    font-size: 14pt;
-    font-family: Arial, Helvetica, sans-serif;
-    position: relative;
-}
-.info_box{
-    border-color: rgba(255, 255, 255, 0.3);
-    border-width: 1px;
-    border-style: solid;
-    border-radius: 10px;
-    background-image: radial-gradient(rgba(255,255,255,0.1), rgba(0,0,0,0.1));
-    width: 25%;
-    padding: 20px;
-    font-size: 10pt;
-    font-family: Arial, Helvetica, sans-serif;
-    color: white;
-    
-    height: 20%;
-}
-.space_missions{
-    border-color: rgba(255, 255, 255, 0.5);
-    border-width: 1px;
-    border-style: solid;
-    border-radius: 10px;
-    background-image: linear-gradient(to bottom right ,rgb(255,200,255,0.15), rgba(0,0,50,0.15));
-    width: auto;
-    padding: 20px;
-    font-size: 10pt;
-    font-family: Arial, Helvetica, sans-serif;
-    position: relative;
-    color: white;
-    margin-left: 10%;
-    margin-right: 10%;
-    margin-top: 1%;
-    margin-bottom: 1%;
-    height:auto;
-    text-align: left;
-    padding-left: 5%;
-}
-.data_upload{
-    background-color: rgba(50,50,50,1);
-    background-image:  radial-gradient(circle, rgba(70,0,120,0.8),rgba(100, 0, 150, 0.8));
-    border: solid rgba(150,150,150,1);
-    border-width:1;
-    border-radius: 10px;
-    color: white;
-    font-size: 14pt;
-    font-family: Arial, Helvetica, sans-serif;
-    padding: 15px;
-    width: 200px;
-    margin: 20px;
-    transition-duration: 0.4s;
-}
-.data_upload:hover{
-    background-color: rgba(0,0,0,0.8);
-}
+    <figure class="hero__art">
+      <svg class="transit" viewBox="0 0 400 390" role="img" aria-labelledby="transit-title transit-desc">
+        <title id="transit-title">Transit method</title>
+        <desc id="transit-desc">A planet crosses in front of its star. Below, the star's brightness curve dips while the planet is in front of it.</desc>
 
-		</style>
-				<style>
-			.star{
-    position: absolute;
-    top: 50%;
-    left: 10%;
-    width: 4px;
-    height: 4px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1)  ;
-    animation:  animate 0.25s linear infinite;
-    z-index: -1;
-}
-.star::before{
-    content: '';
-    position: absolute;
-    top: 10%;
-    transform: translateY(-50%);
-    width: 300px;
-    height: 1px;
-    background: linear-gradient(90deg, #fff, transparent);
-}
-@keyframes animate {
-    0%
-    {
-        transform: rotate(315deg) translateX(0);
-        opacity: 1;
-    }
-    70%
-    {
-        opacity: 1;
+        <!-- star and planet -->
+        <line class="transit__path" x1="30" y1="110" x2="370" y2="110"/>
+        <circle class="transit__star" cx="200" cy="110" r="48"/>
+        <circle class="transit__planet" cx="0" cy="110" r="10"/>
 
-    }
-    100%
-    {
-        transform: rotate(315deg) translateX(-1000px);
-        opacity: 0;
+        <!-- light curve -->
+        <g class="transit__grid">
+          <line x1="40" y1="262" x2="360" y2="262"/>
+          <line x1="40" y1="300" x2="360" y2="300"/>
+          <line x1="40" y1="338" x2="360" y2="338"/>
+        </g>
+        <line class="transit__axis" x1="40" y1="230" x2="40" y2="356"/>
+        <line class="transit__axis" x1="40" y1="356" x2="360" y2="356"/>
+        <text class="transit__label" x="40" y="376">time</text>
+        <text class="transit__label" x="34" y="300" text-anchor="end" transform="rotate(-90 34 300)">brightness</text>
 
-    }
-    
-}
-.star:nth-child(1){
-    top: 0;
-    left: 30%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 4s;
-}
-.star:nth-child(2){
-    top: 5%;
-    left: 15%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 2s;
-}
-.star:nth-child(3){
-    top: 25%;
-    left: 40%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 3s;
-}
-.star:nth-child(4){
-    top: 0;
-    left: 50%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 4s;
-}
-.star:nth-child(5){
-    top: 15%;
-    left: 70%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 2s;
-}
-.star:nth-child(6){
-    top: 35%;
-    left: 80%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 3s;
-}
+        <path class="transit__curve" d="M40 300 L142 300 C150 300 154 338 162 338 L238 338 C246 338 250 300 258 300 L360 300"/>
+        <circle class="transit__dot" r="5"/>
 
+        <line class="transit__dip-mark" x1="300" y1="300" x2="300" y2="338"/>
+        <text class="transit__dip-label" x="306" y="323">transit depth</text>
+      </svg>
+      <figcaption class="muted" style="margin-top:0.75rem;font-size:0.92rem;max-width:44ch">A planet crossing its star dims it by a fraction of a percent. Kepler and TESS watch for that dip; Vespera decides whether a dip is a planet.</figcaption>
+    </figure>
+  </div>
+</section>
 
-		</style>
-	</head>
-	<body>
-		<nav class="top_bar">
-			<img src="/static/images/Vespera_logo.jpeg" style="width:60px;height:60px;border-radius:10px;margin:10px;" align="right">
-			<a href="\"><button class="top_buttons">
-				<img src="/static/images/home_page_image.png" style="width:20px;height:20px;">
-				Main Page
-			</button></a>
-			<a href="\data"><button class="top_buttons" style="margin-left: 10%;">
-				NASA Data
-			</button></a>
-			<a href="\analyze"><button class="top_buttons", style="margin-left: 20%;">
-				Upload Data
-			</button></a>
-			<a href="\compare"><button class="top_buttons", style="margin-left: 30%;">
-				Compare 
-			</button></a>
-			<a href="\about"><button class="top_buttons", style="margin-left: 40%;" >
-				About Us
-			</button></a>
-			
-		</nav>
-		<img src="/static/images/vespera_logo_colorful-removebg-preview.png" style="position: fixed;opacity: 0.1; left: -100px;top: -200px;;height:1500px;width: 1500px;z-index: -2;"  >
-		<div>
-			<span class="star"></span>
-			<span class="star"></span>
-			
-		</div>
-		<section style="margin:0;padding:80px;color: white;" align="center">
-			<div align="center" style="margin-bottom: 20px;" >
-				<h1>Discover New Worlds<br> With Our AI Powered System</h1>
-				<p class="box_p">As team Vespera we created an "Exoplanet Detection App".We used the latest technology and AI to classify observed objects as "Exoplanets".</p>
-			</div>
-			<div style="display: flex; justify-content: center; gap: 10px;flex-wrap: wrap;">
-				<div class="info_box" style="position:static;">
-					<h1>High Accuracy</h1>
-					<p>Our model delivers precise and dependable exoplanet classifications</p>
-				</div>
-				<div class="info_box" style="position:static;">
-					<h1>Fast & Easy</h1>
-					<p>You can upload your datas as a whole dataset and get results immediately.</p>
-				</div>
-				<div class="info_box" style="position:static;height: auto;">
-					<h1>Accessible for Everyone</h1>
-					<p>Everyone can access our website and use it free.</p>
-				</div>
-				<div class="info_box" style="position:static;width: 75% ;">
-					<h1>Habitable Zone</h1>
-					<p>Our program detects the exoplanets which are at the habitable zone.</p>
-				</div>
-			</div>
-		</section>
-		<article align="center" style="color: white;margin: 0;">
-			
-			<h1 style="margin-bottom: 50px;">Supported Space Missions</h1>
-			<div class="space_missions">
-				<h1>Kepler</h1>
-				<p>Kepler space mission datasets are used to train our model. Thanks to NASA data of Kepler telescope, we can classify the exoplanets with a 90% accuracy.</p>
-			</div>
-			<div class="space_missions">
-				<h1>K2</h1>
-				<p>K2 space mission datasets are used to train our model. Thanks to NASA data of K2 telescope , our model can achieve 97% accuracy.</p>
-			</div>
-			<div class="space_missions">
-				<h1>TESS</h1>
-				<p>TESS space mission datasets are used to train our model. Thanks to NASA data of TESS telescope , our model can achieve 85% accuracy.</p>
-			</div>
+<section class="section">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Three steps from a NASA table to a ranked list</h2>
+    </div>
+    <ol class="steps">
+      <li>
+        <h3>Download a mission table</h3>
+        <p>Export the Kepler, K2 or TESS candidate table from the NASA Exoplanet Archive as CSV, with "values only, no errors" selected. <a href="{{ url_for('data') }}">The archives are linked here.</a></p>
+      </li>
+      <li>
+        <h3>Pick the mission and a model</h3>
+        <p>Logistic regression, random forest, SVM or XGBoost. The model trains on the confirmed and false-positive rows of your own file, so it is always fitted to the data you brought.</p>
+      </li>
+      <li>
+        <h3>Read the results</h3>
+        <p>A CSV of candidate predictions, a second one with probabilities, a performance report, and a 3D map of every planet in parsecs around the Sun.</p>
+      </li>
+    </ol>
+  </div>
+</section>
 
-			<a href="\analyze"><button class="data_upload">Upload Exoplanet Data</button></a>
-			<a href="\data"><button class="data_upload">NASA's Exoplanet Data</button></a>
-		
-		</article>
-		<footer>
-			<h1 style="font-size: 10pt;">Builded for NASA Space Apps 2025<br> </h1>
-			<h2 style="font-size: 10pt;"> By Vespera™<br></h2>
-			<p style="font-size: 8pt;">Omer Akhan , Ayaz Buyukterzi<br>Ruzgar Kusakli , Baris Canbolat , Eren Sapci , Ata Orkun Coskun</p>
+<section class="section">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Three missions, one classifier</h2>
+      <p class="muted measure">Each mission catalog has its own columns. Vespera knows which ones to read and what accuracy to expect on a held-out test split.</p>
+    </div>
+    <table class="missions">
+      <thead>
+        <tr>
+          <th scope="col">Mission</th>
+          <th scope="col">Telescope</th>
+          <th scope="col">Features used</th>
+          <th scope="col">Test accuracy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Kepler</th>
+          <td class="tele">Kepler, 2009–2013, one fixed field in Cygnus</td>
+          <td class="feat">Orbital period, impact parameter, transit duration and depth, planet radius, equilibrium temperature, stellar log g and radius</td>
+          <td class="acc">90%</td>
+        </tr>
+        <tr>
+          <th scope="row">K2</th>
+          <td class="tele">Kepler, 2014–2018, fields along the ecliptic</td>
+          <td class="feat">Orbital period, system distance, V, K and Gaia magnitudes</td>
+          <td class="acc">97%</td>
+        </tr>
+        <tr>
+          <th scope="row">TESS</th>
+          <td class="tele">TESS, 2018 onward, nearly the whole sky</td>
+          <td class="feat">Proper motion, transit duration and depth, planet radius, insolation, equilibrium temperature, TESS magnitude, distance, stellar temperature</td>
+          <td class="acc">85%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
-		</footer>
-	</body>
-</html>
+<section class="section">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>What counts as habitable here</h2>
+      <p class="muted measure">A planet is flagged habitable when all four of these fall inside the window. The windows are deliberately conservative: roughly an Earth-sized world on a temperate orbit around a Sun-like star.</p>
+    </div>
+
+    <div class="ranges" role="list">
+      <div class="range" role="listitem">
+        <div class="range__name">Orbital period <span class="range__unit">days</span></div>
+        <div class="range__bar" aria-label="Accepted window 50 to 500 days on a scale of 0 to 1000">
+          <div class="range__window" style="left:5%;width:45%"></div>
+          <span class="range__win-label" style="left:27.5%">50–500</span>
+          <div class="range__ticks"><span>0</span><span>1000</span></div>
+        </div>
+      </div>
+      <div class="range" role="listitem">
+        <div class="range__name">Planet radius <span class="range__unit">Earth radii</span></div>
+        <div class="range__bar" aria-label="Accepted window 0.5 to 2.5 Earth radii on a scale of 0 to 5">
+          <div class="range__window" style="left:10%;width:40%"></div>
+          <span class="range__win-label" style="left:30%">0.5–2.5</span>
+          <div class="range__ticks"><span>0</span><span>5</span></div>
+        </div>
+      </div>
+      <div class="range" role="listitem">
+        <div class="range__name">Star temperature <span class="range__unit">kelvin</span></div>
+        <div class="range__bar" aria-label="Accepted window 4800 to 6300 kelvin on a scale of 3000 to 8000">
+          <div class="range__window" style="left:36%;width:30%"></div>
+          <span class="range__win-label" style="left:51%">4800–6300</span>
+          <div class="range__ticks"><span>3000</span><span>8000</span></div>
+        </div>
+      </div>
+      <div class="range" role="listitem">
+        <div class="range__name">Planet temperature <span class="range__unit">kelvin, equilibrium</span></div>
+        <div class="range__bar" aria-label="Accepted window 180 to 310 kelvin on a scale of 0 to 600">
+          <div class="range__window" style="left:30%;width:21.7%"></div>
+          <span class="range__win-label" style="left:40.8%">180–310</span>
+          <div class="range__ticks"><span>0</span><span>600</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="range-note">Missing values are filled with the column median before the test, so a sparse row is never thrown away. Earth would pass on every axis: 365 days, 1 radius, a 5,772 K star and an equilibrium temperature near 255 K.</p>
+  </div>
+</section>
+{% endblock %}

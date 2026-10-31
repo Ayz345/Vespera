@@ -1,285 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<title>Compare Models</title>
-		<link rel="icon" type="image/x-icon" href="/static/images/Vespera_logo.jpeg">
-		<style>
-			
-body{
-	margin:0;
-	padding:0;
-	background-image:linear-gradient(to bottom right,rgba(0,0,120,1),rgba(150, 0, 150, 1));
-	background-size: 100%;
-	bottom:0;
-	background-repeat: no-repeat;
-}
+{% extends "base.html" %}
+{% block title %}Compare models{% endblock %}
+{% block description %}Train logistic regression, random forest, SVM and XGBoost on the same NASA table and compare their test accuracy.{% endblock %}
 
-h1{
-	font-family:Arial;
-}
+{% block content %}
+<div class="wrap">
+  <header class="page-head">
+    <h1>Compare models</h1>
+    <p class="lede">Train all four classifiers on the same table and see which one scores best on the held-out rows before you commit to it.</p>
+  </header>
 
-.top_bar{
-	background-color: rgb(0,0,100);
-	background-image: linear-gradient(to right ,rgba(20,20,20,0.3),rgba(40,40,40,0.15),rgba(0,0,0,0),rgba(191, 129, 224, 0.1),rgba(124, 69, 212, 0.3));
-	height:80px;
-	width:100%;
-	color:white;
-	font-size:18pt;
-	text-align:rigth;
-	position:fixed;
-	top:0;
-	padding: 0;
-	z-index: 1;
-}
-.top_buttons{
-	position:absolute;
-	background-color:rgba(0,0,0,0);
-	height:100%;
-	width:10%;
-	border:none;
-	color:rgb(255,255,255);
-    font-size:13pt;
-	top:0;
-	margin: 0;
-	transition-duration: 0.4s;
-}
-.top_buttons:hover{
-	background-color:rgba(255,255,255,0.2);
-	border-color:rgba(255,255,255,0.2);
-	margin: 0;
-}
-footer{
-	display:inline-block;
-	background-color: rgb(70,0,100);
-	height:15%;
-	width:100%;
-	color:gray;
-	font-size:10pt;
-	font-family: Arial, Helvetica, sans-serif;
-	text-align: center;
-	position: static;
-	bottom: 0;
-	padding-top: 10px;
-	margin: 0;
-	background-image: linear-gradient(to right, rgba(0,0,0,0),rgba(0, 0, 0,0.3 ));
-}
-a{
-	font-family: Arial, Helvetica, sans-serif;
-	font-size: 14pt;
-	color: white;
-	text-decoration: underline;
-}
-a:hover{
-	color: lightgray;
-	text-decoration: none;
-}
-		</style>
-				<style>
-			.star{
-    position: absolute;
-    top: 50%;
-    left: 10%;
-    width: 4px;
-    height: 4px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1)  ;
-    animation:  animate 0.25s linear infinite;
-    z-index: -1;
-}
-.star::before{
-    content: '';
-    position: absolute;
-    top: 10%;
-    transform: translateY(-50%);
-    width: 300px;
-    height: 1px;
-    background: linear-gradient(90deg, #fff, transparent);
-}
-@keyframes animate {
-    0%
-    {
-        transform: rotate(315deg) translateX(0);
-        opacity: 1;
-    }
-    70%
-    {
-        opacity: 1;
+  <div class="tool">
+    <form class="panel" method="post" enctype="multipart/form-data" data-busy-text="Training four models…" novalidate>
+      {% if error %}
+      <div class="alert" role="alert">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 13.5v.5"/></svg>
+        <div><strong>The comparison did not finish.</strong><br>{{ error }}</div>
+      </div>
+      {% endif %}
 
-    }
-    100%
-    {
-        transform: rotate(315deg) translateX(-1000px);
-        opacity: 0;
-
-    }
-    
-}
-.star:nth-child(1){
-    top: 0;
-    left: 30%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 4s;
-}
-.star:nth-child(2){
-    top: 5%;
-    left: 15%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 2s;
-}
-.star:nth-child(3){
-    top: 25%;
-    left: 40%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 3s;
-}
-.star:nth-child(4){
-    top: 0;
-    left: 50%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 4s;
-}
-.star:nth-child(5){
-    top: 15%;
-    left: 70%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 2s;
-}
-.star:nth-child(6){
-    top: 35%;
-    left: 80%;
-    right:initial;
-    animation-delay:0 ;
-    animation-duration: 3s;
-}
-
-
-		</style>
-		<style>
-			select{
-    width: 20%;
-    height: 30px;
-    border-radius: 10px;
-    border: solid rgba(200,200,200,0.3);
-    padding-left: 10px;
-    font-size: 14pt;
-    background-color: rgba(30,30,150,1);
-    color: white;
-}
-.run_model{
-    width: 100px;
-    height: 50px;
-    border-radius: 10px;
-    border: solid rgba(200,200,200,0.3);
-    background-color: rgba(30,30,150,1);
-    color: white;
-    font-size: 10pt;
-    font-family: Arial, Helvetica, sans-serif;
-    cursor: pointer;
-    transition-duration: 0.4s;
-}
-.run_model:hover{
-    background-color: rgba(0,0,100,1);
-}
-.file_input{
-    border: solid rgba(200,200,200,0.3);
-    border-radius: 10px;
-    padding: 5px;
-    font-size: 14pt;
-    background-color: rgba(30,30,150,1);
-    color: white;
-    width: 40%;
-}
-.file_input::file-selector-button{
-    border: solid rgba(200,200,200,0.3);
-    border-radius: 10px;
-    padding: 5px;
-    font-size: 14pt;
-    background-color: rgba(50,50,200,1);
-    color: white;
-    cursor: pointer;
-    transition-duration: 0.4s;
-}
-		</style>
-        <style>
-            table,tr,th{
-                background-color:rgba(255, 255, 255,0.1 );
-                color: white;
-                border-radius: 5px;
-                border-color: rgba(0, 0, 0,0.3 );
-                text-align: left;
-                font-family: Arial, Helvetica, sans-serif;
-                font-size: 14pt;
-            }
-            table{
-                width:75%;
-                height: 200px;
-            }
-        </style>
-	</head>
-	<body>
-		<nav class="top_bar">
-			<img src="/static/images/Vespera_logo.jpeg" style="width:60px;height:60px;border-radius:10px;margin:10px;" align="right">
-			<a href="\"><button class="top_buttons">
-				<img src="/static/images/home_page_image.png" style="width:20px;height:20px;">
-				Main Page
-			</button></a>
-			<a href="\data"><button class="top_buttons" style="margin-left: 10%;">
-				NASA Data
-			</button></a>
-			<a href="\analyze"><button class="top_buttons", style="margin-left: 20%;">
-				Upload Data
-			</button></a>
-            <a href="\compare"><button class="top_buttons", style="margin-left: 30%;" >
-				Compare
-			</button></a>
-			<a href="\about"><button class="top_buttons", style="margin-left: 40%;" >
-				About Us
-			</button></a>
-            
-			
-		</nav>
-		<div>
-			<span class="star"></span>
-			<span class="star"></span>
-			
-		</div>
-		<img src="/static/images/vespera_logo_colorful-removebg-preview.png" style="position: fixed;opacity: 0.1; left: -100px;top: -200px;;height:1500px;width: 1500px;z-index: -1;"  >
-		<section style="font-family:Arial, Helvetica, sans-serif;color:white;margin:80px;margin-bottom:0;height:100%;width:85%;padding:50px;">
-		    <h1>Model Comparrison</h1>
-            <form method="post" enctype="multipart/form-data">
-                <p>Choose Dataset:</p>
-                <select name="dataset_compare" required>
-                    <option value="k2">K2</option>
-                    <option value="kepler">Kepler</option>
-                    <option value="tess">TESS</option>
-                </select>
-                <br><br>
-                <input type="file" class="file_input" name="file_compare" required>
-                <button type="submit" class="run_model">Compare</button>
-            </form>
-    
-
-            {% if comparison_table %}
-                <h3>Accuracy Comparrison</h3>
-                {{ comparison_table|safe }}
-            {% endif %}
-		</section>
-        <div style="height: 500px;margin-left: 120px;color: white;font-family: Arial, Helvetica, sans-serif;">
-            <h1>How to Use?</h1>
-            <p style="width: 75%;">Firstly you have to select your Mission which can be one of Kepler,K2 and Tess.Secondly you need to upload your data .Finally you click the running button and you have your table.The table you have shows the accuricies of different models.</p>
+      <fieldset class="field" style="border:0;padding:0;margin:0">
+        <legend class="field__label">Mission</legend>
+        <div class="choice-group">
+          <label class="choice"><input type="radio" name="dataset_compare" value="kepler" {% if dataset == 'kepler' or not dataset %}checked{% endif %}><span>Kepler</span></label>
+          <label class="choice"><input type="radio" name="dataset_compare" value="k2" {% if dataset == 'k2' %}checked{% endif %}><span>K2</span></label>
+          <label class="choice"><input type="radio" name="dataset_compare" value="tess" {% if dataset == 'tess' %}checked{% endif %}><span>TESS</span></label>
         </div>
-		<footer>
-			<h1 style="font-size: 10pt;">Builded for NASA Space Apps 2025 </h1>
-			<h2 style="font-size: 10pt;"> By Vespera™</h2>
-			<p style="font-size: 8pt;">Omer Akhan , Ayaz Buyukterzi<br>Ruzgar Kusakli , Baris Canbolat , Eren Sapci , Ata Orkun Coskun</p>
+      </fieldset>
 
-		</footer>
-	
-	</body>
-</html>
+      <div class="field">
+        <span class="field__label">Mission table</span>
+        <label class="file-field">
+          <input type="file" name="file_compare" accept=".csv,text/csv" required>
+          <svg class="file-field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+          <span class="file-field__text">
+            <span class="file-field__name">Choose a CSV or drop it here</span>
+            <span class="file-field__hint">Exported from the NASA Exoplanet Archive, values only, no errors</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Compare the four models</button>
+        <span class="muted">Four trainings in a row. Expect up to a minute on a large table.</span>
+      </div>
+    </form>
+
+    <aside class="aside">
+      <h2>Same split, same features</h2>
+      <p>Every model is trained and tested on the same 90/10 split of your file, so the differences you see come from the algorithm, not from luck in sampling.</p>
+      <dl>
+        <dt>Logistic regression</dt><dd>Linear, fast, easy to interpret</dd>
+        <dt>Random forest</dt><dd>Many decision trees voting together</dd>
+        <dt>SVM</dt><dd>Finds the widest margin between classes; slowest on big tables</dd>
+        <dt>XGBoost</dt><dd>Gradient-boosted trees, usually the strongest on tabular data</dd>
+      </dl>
+    </aside>
+  </div>
+
+  {% if results %}
+  <section class="results" aria-labelledby="results-title">
+    <div class="results__head">
+      <h2 id="results-title">Accuracy on {{ dataset|upper }}</h2>
+    </div>
+    {% set best = results | map(attribute='Accuracy') | max %}
+    <table class="compare-table">
+      <thead>
+        <tr><th scope="col">Model</th><th scope="col" style="width:55%">Test accuracy</th><th scope="col" class="num">Score</th></tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr {% if r.Accuracy == best %}class="is-best"{% endif %}>
+          <td class="model">{{ r.Model }}</td>
+          <td class="bar"><span style="width:{{ (r.Accuracy * 100) | round(1) }}%"></span></td>
+          <td class="num">{{ (r.Accuracy * 100) | round(1) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:1.25rem">Ready to run the best one? <a href="{{ url_for('analyze') }}">Classify the same table with it.</a></p>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

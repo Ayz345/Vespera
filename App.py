@@ -8,6 +8,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from xgboost import XGBClassifier
 from flask import Flask, render_template, request, send_from_directory
+from werkzeug.utils import secure_filename
 import os
 import json
 UPLOAD_FOLDER = 'uploads'
@@ -175,16 +176,46 @@ def to_cartesian(df, dataset):
 @app.route("/")
 def home():
     return render_template("home.html")
+DATASETS = {"kepler", "k2", "tess"}
+MODELS = {"logreg", "rf", "svm", "xgb"}
+
+def load_upload(file, dataset_type):
+    """Save an uploaded table and read it. Returns (df, error_message)."""
+    if dataset_type not in DATASETS:
+        return None, "Pick a mission: Kepler, K2 or TESS."
+    if file is None or not file.filename:
+        return None, "Choose a CSV file to upload."
+    filename = secure_filename(file.filename) or "upload.csv"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    try:
+        df = pd.read_csv(filepath, comment='#')
+    except Exception:
+        return None, "The file could not be read as CSV. Export it again from the NASA Exoplanet Archive."
+    return df, None
+
+def explain_failure(exc, dataset_type):
+    if isinstance(exc, KeyError):
+        return (f"The file does not have the columns a {dataset_type.upper()} table should have "
+                f"(missing {exc}). Check that you picked the mission the file came from.")
+    if isinstance(exc, ValueError):
+        return "The table has too few labelled rows to train on. Upload the full archive export, not a filtered one."
+    return f"Something went wrong while training: {exc}"
+
 @app.route("/analyze", methods=["GET", "POST"])
 def analyze():
     if request.method == "POST":
         dataset_type = request.form.get("dataset")
         model_choice = request.form.get("model_choice")
-        file = request.files['file']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filepath)
-        df = pd.read_csv(filepath, comment='#')
-        results_df, accuracy, confmatrix, classreport, coefs, cols, dfconfirmedfor3d, results_dfwProba = model1(df, dataset_type, model_choice)
+        if model_choice not in MODELS:
+            model_choice = "logreg"
+        df, error = load_upload(request.files.get('file'), dataset_type)
+        if error:
+            return render_template("analyze.html", error=error, dataset=dataset_type, model_choice=model_choice), 400
+        try:
+            results_df, accuracy, confmatrix, classreport, coefs, cols, dfconfirmedfor3d, results_dfwProba = model1(df, dataset_type, model_choice)
+        except Exception as exc:
+            return render_template("analyze.html", error=explain_failure(exc, dataset_type), dataset=dataset_type, model_choice=model_choice), 400
         csv_file = f"Predictions_{dataset_type}.csv"
         csv_filewP=f"Predictions(Probabilistic)_{dataset_type}.csv"
         txt_file = f"Performance_{dataset_type}.txt"
@@ -214,11 +245,12 @@ def analyze():
                                csv_filewP=csv_filewP,
                                accuracy=accuracy,
                                dataset=dataset_type,
+                               model_choice=model_choice,
                                pointscand=json.dumps(pointscand),
                                pointsconf=json.dumps(pointsconf))
     return render_template("analyze.html")
 @app.route("/about")
-def download():
+def about():
     return render_template("about.html")
 @app.route("/data")
 def data():
@@ -227,22 +259,23 @@ def data():
 def compare():
     if request.method == "POST":
         dataset_type = request.form.get("dataset_compare")
-        file = request.files['file_compare']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filepath)
-        df = pd.read_csv(filepath, comment='#')
+        df, error = load_upload(request.files.get('file_compare'), dataset_type)
+        if error:
+            return render_template("compare.html", error=error, dataset=dataset_type), 400
         models = {
-            "Logistic Regression": "logreg",
-            "Random Forest": "rf",
+            "Logistic regression": "logreg",
+            "Random forest": "rf",
             "SVM": "svm",
             "XGBoost": "xgb"
         }
         results = []
-        for name, key in models.items():
-            _, acc, _, _, _, _, _,_  = model1(df, dataset_type, model_choice=key)
-            results.append({"Model": name, "Accuracy": round(acc, 4)})
-        comp_df = pd.DataFrame(results)
-        return render_template("compare.html", comparison_table=comp_df.to_html(index=False))
+        try:
+            for name, key in models.items():
+                _, acc, _, _, _, _, _,_  = model1(df, dataset_type, model_choice=key)
+                results.append({"Model": name, "Accuracy": round(acc, 4)})
+        except Exception as exc:
+            return render_template("compare.html", error=explain_failure(exc, dataset_type), dataset=dataset_type), 400
+        return render_template("compare.html", results=results, dataset=dataset_type)
     return render_template("compare.html")
 @app.route('/results/<filename>')
 def download_file(filename):
