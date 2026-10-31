@@ -226,11 +226,13 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   }
   function set(name, p) {
     section = name; progress = clamp01(p);
-    if (name === 'results' || (name === 'team' && catalog.userData.real)) {
-      // Face the result cloud from one side; only time drifts it, never the scroll
-      const a = orbitTime * 0.04 + 0.7, R = results.radius * 2.3;
-      target.pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.35, results.center.z + Math.cos(a) * R);
-      target.look.copy(results.center); target.fov = 44; dim = name === 'team' ? 0.6 : 0;
+    if (name === 'results') {
+      // Face the cloud from one side; it sits in the right half of the frame. Drag turns it.
+      const a = 0.7, R = results.radius * 2.4;
+      target.pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.3, results.center.z + Math.cos(a) * R);
+      fwd.copy(results.center).sub(target.pos).normalize(); right.crossVectors(fwd, UP).normalize();
+      target.look.copy(results.center).addScaledVector(right, -results.radius * 0.95);
+      target.fov = 44; dim = 0;
       return;
     }
     if (name === 'missions') {
@@ -244,7 +246,10 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     keyAt(KF[name] || KF.hero, progress);
   }
 
-  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1 };
+  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1, yaw: 0, pitch: 0 };
+  const resultGroup = new THREE.Group(); resultGroup.visible = false; scene.add(resultGroup);
+  const resultMat = new THREE.PointsMaterial({ size: 0.5, map: dot, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+  let resultPts = null;
   function setResults({ pointscand = [], pointsconf = [] }) {
     const D2R = Math.PI / 180;
     const all = [...pointsconf.map((p) => ({ ...p, kind: 'conf' })), ...pointscand.map((p) => ({ ...p, kind: 'cand' }))].filter((p) => p.dist > 0);
@@ -275,12 +280,16 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
       cs[i * 3] = col.r; cs[i * 3 + 1] = col.g; cs[i * 3 + 2] = col.b;
     });
     c.divideScalar(n);
-    catalog.geometry.dispose();
+    // Centre the cloud on its own origin so it can be rotated in place
+    for (let i = 0; i < n; i++) { ps[i * 3] -= c.x; ps[i * 3 + 1] -= c.y; ps[i * 3 + 2] -= c.z; }
+    if (resultPts) { resultGroup.remove(resultPts); resultPts.geometry.dispose(); }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(ps, 3));
     g.setAttribute('color', new THREE.BufferAttribute(cs, 3));
-    catalog.geometry = g; catalog.userData.real = true;
+    resultPts = new THREE.Points(g, resultMat); resultGroup.add(resultPts);
+    resultGroup.position.copy(c);
     results.center.copy(c); results.radius = Math.max(8, far * 0.75); results.wide = wide; results.angleScale = angleScale;
+    results.yaw = 0; results.pitch = 0; resultGroup.rotation.set(0, 0, 0);
     return results;
   }
 
@@ -300,7 +309,8 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     requestAnimationFrame(frame);
     if (!visible) return;
     const time = clock.getElapsedTime();
-    if ((section === 'results' || (section === 'team' && catalog.userData.real)) && !reducedMotion) { orbitTime = time; set(section, progress); }
+    resultGroup.visible = section === 'results' && !!resultPts;
+    if (resultPts && section === 'results') { resultGroup.rotation.y = results.yaw + (reducedMotion ? 0 : time * 0.03); resultGroup.rotation.x = results.pitch; }
     sunMat.uniforms.uTime.value = reducedMotion ? 0 : time;
     sun.rotation.y = reducedMotion ? 0 : time * 0.02;
 
@@ -364,10 +374,9 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     }
     sweep.scale.setScalar(Math.max(0.01, sweepTarget / 6));
     sweep.material.opacity = section === 'method' && progress > 0.1 && progress < 0.9 ? 0.6 : 0;
-    catalog.rotation.y = catalog.userData.real || reducedMotion ? 0 : time * 0.02;
-    catMat.opacity = (section === 'hero' ? 0.35 : section === 'console' && !catalog.userData.real ? 0.45 : (1 - dim * 0.6)) * (1 - dark);
-    sun.visible = corona.visible = !(section === 'results' && results.radius > 30 && false);
-    catMat.size = catalog.userData.real ? 0.5 : 0.16;
+    catalog.rotation.y = reducedMotion ? 0 : time * 0.02;
+    catalog.visible = section !== 'results';
+    catMat.opacity = (section === 'hero' ? 0.35 : section === 'console' ? 0.45 : (1 - dim * 0.6)) * (1 - dark);
 
     // Missions: the sky and its fields
     const inSky = section === 'missions';
@@ -396,5 +405,6 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
 
   const setDark = (d) => { dark = clamp01(d); };
   const setOrbit = (t) => { orbitT = clamp01(t); };
-  return { set, setDark, setOrbit, setResults, resize };
+  const turnResults = (dx, dy) => { results.yaw += dx; results.pitch = Math.max(-1.2, Math.min(1.2, results.pitch + dy)); };
+  return { set, setDark, setOrbit, setResults, turnResults, resize };
 }

@@ -28,8 +28,12 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
       note.classList.toggle('is-on', p > 0.1 && p < 0.3);
       const d = smoothstep(0.515, 0.55, p);                         // totality at 0.52, hold the ring a beat
       setDark(d);
-      dark.style.opacity = smoothstep(0.55, 0.68, p).toFixed(3);    // the strip surfaces in the dark
-      dark.classList.toggle('is-on', p > 0.55);
+      // The title card: lines arrive one by one out of the black, tracking tightens as they land,
+      // and the card dissolves as the hero stage scrolls away.
+      const card = smoothstep(0.58, 0.7, p) * (1 - smoothstep(0.9, 1, p));
+      dark.style.opacity = card.toFixed(3);
+      dark.classList.toggle('is-on', p > 0.58);
+      dark.style.setProperty('--track', (0.35 * (1 - smoothstep(0.58, 0.8, p))).toFixed(3) + 'em');
     });
     gsap.from('.hero__title .line > span', { yPercent: 110, duration: 1.3, ease: 'expo.out', stagger: 0.09, delay: 0.2 });
     gsap.from(['.hero__tag', '.hero__lede', '.hero__actions'], { y: 24, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.1, delay: 0.5 });
@@ -130,22 +134,13 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
   ScrollTrigger.batch('[data-reveal]', { start: 'top 88%', onEnter: (els) => els.forEach((el, i) => setTimeout(() => el.classList.add('is-in'), i * 90)), once: true });
   ScrollTrigger.create({ trigger: '#footer-word', start: 'top 95%', onEnter: () => document.getElementById('footer-word').classList.add('is-in'), once: true });
 
-  /* ----- The dark strip: three rows, each at its own speed, nudged by scroll velocity ----- */
+  /* ----- Results: drag anywhere in the empty half to turn the cloud ----- */
   {
-    const tracks = [...document.querySelectorAll('#dark .dark__track')].map((el) => ({ el, x: 0, speed: parseFloat(el.dataset.speed || '1') }));
-    let vel = 0;
-    ScrollTrigger.create({ start: 0, end: 'max', onUpdate: (self) => { vel = self.getVelocity() / 500; } });
-    (function tick() {
-      const kick = Math.min(10, Math.abs(vel)) * Math.sign(vel || 1);
-      tracks.forEach((t) => {
-        const half = t.el.scrollWidth / 2 || 1;
-        t.x -= (reducedMotion ? 0 : t.speed) + kick * Math.sign(t.speed);
-        if (t.x < -half) t.x += half; if (t.x > 0) t.x -= half;
-        t.el.style.transform = `translate3d(${t.x}px,0,0)`;
-      });
-      vel *= 0.92;
-      requestAnimationFrame(tick);
-    })();
+    const res = document.getElementById('results');
+    let dragging = false, lx = 0, ly = 0;
+    res.addEventListener('pointerdown', (e) => { if (e.target.closest('.results__hud, a, button')) return; dragging = true; lx = e.clientX; ly = e.clientY; res.classList.add('is-dragging'); });
+    addEventListener('pointermove', (e) => { if (!dragging || !world) return; world.turnResults((e.clientX - lx) * 0.006, (e.clientY - ly) * 0.004); lx = e.clientX; ly = e.clientY; });
+    addEventListener('pointerup', () => { dragging = false; res.classList.remove('is-dragging'); });
   }
 
   /* ----- Progress bar, nav state ----- */
