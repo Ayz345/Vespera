@@ -1,7 +1,7 @@
 // The console: Classify / Compare tabs, upload, call the API, render results.
 import { renderMap } from './map3d.js';
 
-export function setupConsole({ reducedMotion = false } = {}) {
+export function setupConsole({ reducedMotion = false, world = null } = {}) {
   const form = document.getElementById('run-form');
   const tabs = [...document.querySelectorAll('.tab')];
   const ink = document.querySelector('.tabs__ink');
@@ -125,6 +125,7 @@ export function setupConsole({ reducedMotion = false } = {}) {
     map.hidden = false;
     reveal();
     renderMap(document.getElementById('map-view'), r, { reducedMotion });
+    if (world) world.setResults(r);
   }
 
   function showCompare(r) {

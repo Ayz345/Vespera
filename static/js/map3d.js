@@ -33,18 +33,18 @@ export function renderMap(container, { pointscand = [], pointsconf = [] }, { red
   }
   const split = (pts) => ({ hab: pts.filter((p) => p.Habitability === 'Habitable'), not: pts.filter((p) => p.Habitability !== 'Habitable') });
   const c = split(pointscand), f = split(pointsconf);
-  group(f.not, 0x8ea0bc, 1.1);
-  group(f.hab, 0xf59e0b, 2.2);
-  group(c.not, 0x60a5fa, 1.4);
-  group(c.hab, 0x22d3ee, 2.6);
+  group(f.not, 0x6e6a64, 1.1);
+  group(f.hab, 0xf2f0ec, 2.2);
+  group(c.not, 0xff3b4e, 1.4);
+  group(c.hab, 0xc8ff3d, 2.6);
 
   // The Sun at the origin, and faint reference rings at 100, 500, 1000 pc
-  const sun = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffc857 }));
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff3b2e }));
   scene.add(sun);
   [100, 500, 1000, 2000].forEach((pc) => {
     const r = pc * k;
     if (r > 400) return;
-    const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.05, r + 0.05, 128), new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.25, side: THREE.DoubleSide }));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.05, r + 0.05, 128), new THREE.MeshBasicMaterial({ color: 0xe5102b, transparent: true, opacity: 0.22, side: THREE.DoubleSide }));
     ring.rotation.x = Math.PI / 2;
     scene.add(ring);
   });

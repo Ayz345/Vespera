@@ -1,24 +1,26 @@
-import { startStarfield } from './starfield.js';
-import { setupTransit } from './transit.js';
+import { createWorld } from './world.js';
 import { setupScenes } from './scenes.js';
 import { setupConsole } from './console.js';
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Cursor glow follows the pointer (desktop only)
-if (window.matchMedia('(pointer: fine)').matches) {
-  document.body.classList.add('has-pointer');
-  const glow = document.querySelector('.cursor-glow');
-  let x = innerWidth / 2, y = innerHeight / 2, tx = x, ty = y;
-  addEventListener('pointermove', (e) => { tx = e.clientX; ty = e.clientY; }, { passive: true });
-  (function tick() { x += (tx - x) * 0.12; y += (ty - y) * 0.12; glow.style.transform = `translate(${x}px, ${y}px)`; requestAnimationFrame(tick); })();
+let world = null;
+try {
+  world = createWorld(document.getElementById('world'), {
+    reducedMotion,
+    onSweep: (found, total) => {
+      const el = document.getElementById('sweep-count');
+      if (el) el.textContent = found.toLocaleString('en');
+      const tot = document.getElementById('sweep-total');
+      if (tot) tot.textContent = total.toLocaleString('en');
+    },
+  });
+} catch (e) {
+  console.warn('WebGL unavailable', e);
+  document.documentElement.classList.add('no-webgl');
 }
 
-try { startStarfield(document.getElementById('stars'), { reducedMotion }); } catch (e) { console.warn('Starfield unavailable', e); }
+setupScenes({ world, reducedMotion });
+setupConsole({ reducedMotion, world });
 
-setupTransit({ reducedMotion });
-setupScenes({ reducedMotion });
-setupConsole({ reducedMotion });
-
-// Fonts change layout; recompute pins once they are in
 document.fonts?.ready.then(() => window.ScrollTrigger && ScrollTrigger.refresh());
