@@ -18,13 +18,13 @@ float fbm(vec3 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a 
 
 function sunMaterial() {
   return new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uDark: { value: 0 } },
     vertexShader: `
       varying vec3 vN; varying vec3 vP; varying vec3 vView;
       void main(){ vN = normalize(normalMatrix * normal); vP = normalize(position);
         vec4 mv = modelViewMatrix * vec4(position, 1.0); vView = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
     fragmentShader: NOISE + `
-      uniform float uTime; varying vec3 vN; varying vec3 vP; varying vec3 vView;
+      uniform float uTime; uniform float uDark; varying vec3 vN; varying vec3 vP; varying vec3 vView;
       void main(){
         float n1 = fbm(vP * 2.6 + vec3(0.0, 0.0, uTime * 0.08));
         float n2 = fbm(vP * 7.0 - vec3(uTime * 0.05, 0.0, 0.0));
@@ -33,7 +33,7 @@ function sunMaterial() {
         c = mix(c, vec3(1.0, 0.55, 0.28), smoothstep(0.74, 0.95, t));
         float fres = pow(1.0 - max(dot(normalize(vView), vN), 0.0), 2.2);
         c += vec3(1.0, 0.18, 0.12) * fres * 1.4;
-        gl_FragColor = vec4(c * 1.35, 1.0);
+        gl_FragColor = vec4(c * 1.35 * (1.0 - uDark * 0.97), 1.0);
       }`,
   });
 }
@@ -146,32 +146,56 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   /* ----- Camera targets ----- */
   const cam = { pos: new THREE.Vector3(0.6, 0.5, 8.6), look: new THREE.Vector3(0, 0.2, 0), fov: 42 };
   const target = { pos: cam.pos.clone(), look: cam.look.clone(), fov: 42 };
-  let section = 'hero', progress = 0, dim = 0;
+  let section = 'hero', progress = 0, dim = 0, dark = 0;
 
+  // Camera keyframes. Each section's last key equals the next section's first key,
+  // so the camera never moves on its own between pinned scenes.
+  const Z = small ? 1.5 : 1;
+  const KF = {
+    hero: [
+      { t: 0, pos: [0.6, 0.5, 8.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
+      { t: 0.62, pos: [-1.4, 0.9, 7.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
+      { t: 1, pos: [-2, 7, 15], look: [0, 0, 0], fov: 46, dim: 0 },
+    ],
+    method: [
+      { t: 0, pos: [-2, 7, 15], look: [0, 0, 0], fov: 46, dim: 0 },
+      { t: 0.85, pos: [2, 15, 25], look: [0, 0, 0], fov: 48, dim: 0 },
+      { t: 1, pos: [17.9, 14, 42.4], look: [0, 0, 0], fov: 50, dim: 0 },
+    ],
+    zone: [
+      { t: 0, pos: [-45.9, 6, -3.3], look: [0, 0, 0], fov: 50, dim: 0 },
+      { t: 0.3, pos: [-1, 11, 16], look: [0, 0, 0], fov: 44, dim: 0 },
+      { t: 1, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0 },
+    ],
+    console: [
+      { t: 0, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0.15 },
+      { t: 1, pos: [-2, 4, 38], look: [0, 0, 0], fov: 44, dim: 0.65 },
+    ],
+    team: [
+      { t: 0, pos: [-2, 4, 38], look: [0, 0, 0], fov: 44, dim: 0.65 },
+      { t: 1, pos: [3, 3, 48], look: [0, 0, 0], fov: 44, dim: 0.7 },
+    ],
+  };
+  function keyAt(keys, p) {
+    let i = 0;
+    while (i < keys.length - 2 && p > keys[i + 1].t) i++;
+    const a = keys[i], b = keys[i + 1];
+    const u = smooth(clamp01((p - a.t) / (b.t - a.t || 1)));
+    target.pos.set(lerp(a.pos[0], b.pos[0], u), lerp(a.pos[1], b.pos[1], u), lerp(a.pos[2], b.pos[2], u));
+    target.look.set(lerp(a.look[0], b.look[0], u), lerp(a.look[1], b.look[1], u), lerp(a.look[2], b.look[2], u));
+    target.fov = lerp(a.fov, b.fov, u); dim = lerp(a.dim, b.dim, u);
+  }
   function set(name, p) {
     section = name; progress = clamp01(p);
-    const t = smooth(progress);
-    switch (name) {
-      case 'hero':
-        target.pos.set(lerp(0.6, -1.4, t), lerp(0.5, 0.9, t), lerp(small ? 13.5 : 8.6, small ? 12 : 7.6, t));
-        target.look.set(0, 0.2, 0); target.fov = 42; dim = 0; break;
-      case 'method':
-        target.pos.set(lerp(-2, 2, t), lerp(7, 15, t), lerp(15, 25, t));
-        target.look.set(0, 0, 0); target.fov = 46; dim = 0; break;
-      case 'missions': {
-        const a = t * Math.PI * 1.35 + 0.4;
-        target.pos.set(Math.sin(a) * 46, lerp(14, 6, t), Math.cos(a) * 46);
-        target.look.set(0, 0, 0); target.fov = 50; dim = 0; break; }
-      case 'zone':
-        target.pos.set(lerp(-1, 5, t), lerp(11, 7, t), lerp(16, 14, t));
-        target.look.set(0, 0, 0); target.fov = 44; dim = 0; break;
-      case 'console':
-        target.pos.set(lerp(2, -2, t), lerp(6, 4, t), lerp(30, 38, t));
-        target.look.set(0, 0, 0); target.fov = 44; dim = lerp(0.35, 0.65, t); break;
-      case 'team':
-        target.pos.set(lerp(-2, 3, t), 3, lerp(40, 48, t));
-        target.look.set(0, 0, 0); target.fov = 44; dim = 0.7; break;
+    if (name === 'missions') {
+      // Orbit the sky sphere. Starts where method ends, ends where zone starts.
+      const t = smooth(progress);
+      const a = t * Math.PI * 1.35 + 0.4;
+      target.pos.set(Math.sin(a) * 46, lerp(14, 6, t), Math.cos(a) * 46);
+      target.look.set(0, 0, 0); target.fov = 50; dim = 0;
+      return;
     }
+    keyAt(KF[name] || KF.hero, progress);
   }
 
   function setResults({ pointscand = [], pointsconf = [] }) {
@@ -213,17 +237,17 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     sun.rotation.y = reducedMotion ? 0 : time * 0.02;
 
     // Camera easing
-    cam.pos.lerp(target.pos, 0.07); cam.look.lerp(target.look, 0.07); cam.fov += (target.fov - cam.fov) * 0.07;
+    cam.pos.lerp(target.pos, 0.09); cam.look.lerp(target.look, 0.09); cam.fov += (target.fov - cam.fov) * 0.09;
     camera.position.copy(cam.pos); camera.lookAt(cam.look); camera.fov = cam.fov; camera.updateProjectionMatrix();
 
     // Hero: the planet crosses in front of the star, between the camera and the sun
-    const heroP = section === 'hero' ? progress : (section === 'method' ? 1 : 0);
+    const heroP = section === 'hero' ? clamp01((progress - 0.1) / 0.7) : 1;   // in front of the star around p = 0.45
     const px = lerp(-5.5, 5.5, heroP);
     planet.position.set(px, 0.15 + Math.sin(heroP * Math.PI) * -0.2, 2.9);
-    planet.visible = section === 'hero' || section === 'method';
+    planet.visible = section === 'hero';
     // Star dims slightly during transit, exaggerated so it reads
     const covered = Math.max(0, 1 - Math.abs(px) / 1.6);
-    bloom.strength = lerp(0.9, 0.55, covered * (section === 'hero' ? 1 : 0)) * (1 - dim * 0.5);
+    bloom.strength = lerp(1.0, 0.6, covered * (section === 'hero' ? 1 : 0)) * (1 - dim * 0.5) * (1 - dark);
 
     // Method: the sweep classifies the catalog
     const sweepTarget = section === 'method' ? lerp(5.5, 17.5, clamp01((progress - 0.12) / 0.75)) : (section === 'hero' ? 0 : 17.5);
@@ -243,7 +267,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     sweep.scale.setScalar(Math.max(0.01, sweepTarget / 6));
     sweep.material.opacity = section === 'method' && progress > 0.1 && progress < 0.9 ? 0.6 : 0;
     catalog.rotation.y = reducedMotion ? 0 : time * 0.02;
-    catMat.opacity = section === 'hero' ? 0.35 : (1 - dim * 0.6);
+    catMat.opacity = (section === 'hero' ? 0.35 : (1 - dim * 0.6)) * (1 - dark);
     catMat.size = catalog.userData.real ? 0.22 : 0.16;
 
     // Missions: the sky and its fields
@@ -265,10 +289,12 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     orbitPath.scale.setScalar(au * AU);
     earth.position.set(Math.cos(-0.7) * au * AU, 0, Math.sin(-0.7) * au * AU);
 
-    corona.material.opacity = 0.8 - dim * 0.4;
+    corona.material.opacity = (0.8 - dim * 0.4) * (1 - dark);
+    sunMat.uniforms.uDark.value = dark;
     composer.render();
   }
   frame();
 
-  return { set, setResults, resize, zoneAU: () => 0.2 + 2.4 * (section === 'zone' ? progress : 1) };
+  const setDark = (d) => { dark = clamp01(d); };
+  return { set, setDark, setResults, resize, zoneAU: () => 0.2 + 2.4 * (section === 'zone' ? progress : 1) };
 }

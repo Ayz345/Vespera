@@ -1,59 +1,78 @@
 // Scroll drives the world. Each pinned section hands the world its progress;
-// the HTML on top only reveals captions at the right moments.
+// the HTML on top reveals captions at the moments the camera arrives.
+
+const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 export function setupScenes({ world, reducedMotion = false } = {}) {
   if (!window.gsap || !window.ScrollTrigger) return;
   gsap.registerPlugin(ScrollTrigger);
   const scrub = reducedMotion ? true : 0.6;
-  const drive = (name) => (self) => world && world.set(name, self.progress);
-  const pinned = (id, length, name, extra = {}) => {
+  const blackout = document.getElementById('blackout');
+  const setDark = (d) => { blackout.style.opacity = d.toFixed(3); world && world.setDark(d); };
+  const pinned = (id, length, onUpdate) => {
     const section = document.getElementById(id);
     const stage = section.querySelector('.scene__stage');
-    return ScrollTrigger.create({ trigger: section, start: 'top top', end: '+=' + length, pin: stage, scrub, onUpdate: drive(name), ...extra });
+    return ScrollTrigger.create({ trigger: section, start: 'top top', end: '+=' + length, pin: stage, scrub, onUpdate });
   };
+  const show = (el, on) => el && el.classList.toggle('is-in', on);
 
-  /* ----- Hero: the transit ----- */
-  pinned('hero', '170%', 'hero', {
-    onUpdate: (self) => {
-      world && world.set('hero', self.progress);
-      const fade = Math.max(0, 1 - self.progress * 2.2);
-      gsap.set('.hero__copy', { opacity: fade, y: self.progress * -60 });
-      document.getElementById('hero-note').classList.toggle('is-on', self.progress > 0.45);
-    },
-  });
-  gsap.from('.hero__title .line > span', { yPercent: 110, duration: 1.3, ease: 'expo.out', stagger: 0.09, delay: 0.2 });
-  gsap.from(['.hero__tag', '.hero__lede', '.hero__actions'], { y: 24, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.1, delay: 0.5 });
-
-  /* ----- Method: the sweep ----- */
+  /* ----- Hero: the transit pulls the screen into darkness ----- */
   {
+    const dark = document.getElementById('dark');
+    const note = document.getElementById('hero-note');
+    const copy = document.querySelector('.hero__copy');
+    pinned('hero', '230%', (self) => {
+      const p = self.progress;
+      world && world.set('hero', p);                                // the planet sits in front of the star around 45%
+      gsap.set(copy, { opacity: Math.max(0, 1 - p * 3), y: p * -80 });
+      note.classList.toggle('is-on', p > 0.22 && p < 0.46);
+      const d = smoothstep(0.40, 0.52, p);                          // fully dark while the planet is in front
+      setDark(d);
+      dark.style.opacity = smoothstep(0.55, 0.68, p).toFixed(3);    // the strip surfaces in the dark
+      dark.classList.toggle('is-on', p > 0.55);
+    });
+    gsap.from('.hero__title .line > span', { yPercent: 110, duration: 1.3, ease: 'expo.out', stagger: 0.09, delay: 0.2 });
+    gsap.from(['.hero__tag', '.hero__lede', '.hero__actions'], { y: 24, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.1, delay: 0.5 });
+  }
+
+  /* ----- Method: light returns with the heading, then the sweep ----- */
+  {
+    const title = document.getElementById('method-title');
     const caps = [...document.querySelectorAll('#method .cap')];
-    pinned('method', '240%', 'method', {
-      onUpdate: (self) => {
-        world && world.set('method', self.progress);
-        const p = self.progress;
-        caps.forEach((c, i) => c.classList.toggle('is-on', p >= [0.0, 0.3, 0.72][i] && p < [0.3, 0.72, 1.01][i]));
-        document.getElementById('sweep-readout').classList.toggle('is-on', p > 0.14 && p < 0.95);
-      },
+    const readout = document.getElementById('sweep-readout');
+    pinned('method', '260%', (self) => {
+      const p = self.progress;
+      setDark(1 - smoothstep(0.02, 0.22, p));
+      world && world.set('method', p);
+      show(title, p > 0.06);
+      caps.forEach((c, i) => c.classList.toggle('is-on', p >= [0.1, 0.34, 0.74][i] && p < [0.34, 0.74, 1.01][i]));
+      readout.classList.toggle('is-on', p > 0.2 && p < 0.96);
     });
   }
 
   /* ----- Missions: three fields on the sky ----- */
   {
+    const title = document.getElementById('missions-title');
     const caps = [...document.querySelectorAll('#missions .mission')];
-    pinned('missions', '240%', 'missions', {
-      onUpdate: (self) => {
-        world && world.set('missions', self.progress);
-        const third = self.progress * 3;
-        caps.forEach((c, i) => c.classList.toggle('is-on', third >= i && third < i + 1));
-      },
+    const links = document.querySelector('#missions .mission__links');
+    pinned('missions', '240%', (self) => {
+      const p = self.progress;
+      world && world.set('missions', p);
+      show(title, p > 0.03);
+      const third = p * 3;
+      caps.forEach((c, i) => c.classList.toggle('is-on', third >= i && third < i + 1));
+      links && links.classList.toggle('is-on', p > 0.05);
     });
   }
 
-  /* ----- Zone: push the planet outward ----- */
+  /* ----- Zone: the camera arrives, then the planet is pushed outward ----- */
   {
     const section = document.getElementById('zone');
+    const title = document.getElementById('zone-title');
+    const gauges = section.querySelector('.gauges');
+    const verdictEl = document.getElementById('zone-verdict');
+    const readout = section.querySelector('.zone__readout');
     const auOut = document.getElementById('zone-au');
-    const verdict = document.getElementById('zone-verdict');
     const g = {
       period: { out: document.getElementById('g-period'), pin: document.getElementById('p-period'), el: section.querySelector('[data-gauge="period"]'), lo: 50, hi: 500, min: 0, max: 1000 },
       teq: { out: document.getElementById('g-teq'), pin: document.getElementById('p-teq'), el: section.querySelector('[data-gauge="teq"]'), lo: 180, hi: 310, min: 0, max: 600 },
@@ -74,39 +93,45 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
       const okT = teq >= g.teq.lo && teq <= g.teq.hi;
       g.teq.el.classList.toggle('is-ok', okT);
       const ok = okP && okT;
-      verdict.classList.toggle('is-ok', ok);
-      verdict.textContent = ok ? 'Inside the window.' : teq > 310 ? 'Too close.' : period > 500 ? 'Temperate, but the year is too long.' : 'Too far.';
+      verdictEl.classList.toggle('is-ok', ok);
+      verdictEl.textContent = ok ? 'Inside the window.' : teq > 310 ? 'Too close.' : period > 500 ? 'Temperate, but the year is too long.' : 'Too far.';
     }
-    pinned('zone', '220%', 'zone', { onUpdate: (self) => { world && world.set('zone', self.progress); render(self.progress); } });
+    pinned('zone', '240%', (self) => {
+      const p = self.progress;
+      world && world.set('zone', p);
+      show(title, p > 0.16);                                   // the camera has arrived by 0.3
+      show(gauges, p > 0.24); show(verdictEl, p > 0.3); show(readout, p > 0.3);
+      render(smoothstep(0.3, 1, p));                           // the planet moves only once we are there
+    });
     render(0);
   }
 
   /* ----- Console and team: the world recedes ----- */
-  ScrollTrigger.create({ trigger: '#console', start: 'top bottom', end: 'bottom top', onUpdate: drive('console') });
-  ScrollTrigger.create({ trigger: '#team', start: 'top bottom', end: 'bottom top', onUpdate: drive('team') });
+  ScrollTrigger.create({ trigger: '#console', start: 'top bottom', end: 'bottom top', onUpdate: (self) => world && world.set('console', self.progress) });
+  ScrollTrigger.create({ trigger: '#team', start: 'top bottom', end: 'bottom top', onUpdate: (self) => world && world.set('team', self.progress) });
 
-  /* ----- Split headings and reveals ----- */
-  ScrollTrigger.batch('[data-split]:not(.hero__title)', { start: 'top 85%', onEnter: (els) => els.forEach((el) => el.classList.add('is-in')), once: true });
-  document.querySelectorAll('.console__head, .panel, .team__copy, .team__photo').forEach((el) => el.setAttribute('data-reveal', ''));
-  ScrollTrigger.batch('[data-reveal]', { start: 'top 88%', onEnter: (els) => els.forEach((el, i) => setTimeout(() => el.classList.add('is-in'), i * 80)), once: true });
+  /* ----- Headings and reveals outside the pinned scenes ----- */
+  ScrollTrigger.batch('#console-title, #team-title', { start: 'top 85%', onEnter: (els) => els.forEach((el) => el.classList.add('is-in')), once: true });
+  document.querySelectorAll('.console__head, .team__copy').forEach((el) => el.setAttribute('data-reveal', ''));
+  ScrollTrigger.batch('[data-reveal]', { start: 'top 88%', onEnter: (els) => els.forEach((el, i) => setTimeout(() => el.classList.add('is-in'), i * 90)), once: true });
   ScrollTrigger.create({ trigger: '#footer-word', start: 'top 95%', onEnter: () => document.getElementById('footer-word').classList.add('is-in'), once: true });
 
-  /* ----- Marquee follows scroll velocity ----- */
+  /* ----- The dark strip: three rows, each at its own speed, nudged by scroll velocity ----- */
   {
-    const track = document.getElementById('marquee');
-    if (track) {
-      let x = 0, vel = 0, base = reducedMotion ? 0 : 0.6;
-      const half = () => track.scrollWidth / 2;
-      ScrollTrigger.create({ start: 0, end: 'max', onUpdate: (self) => { vel = self.getVelocity() / 400; } });
-      (function tick() {
-        x -= base + Math.min(14, Math.abs(vel)) * Math.sign(vel || 1);
-        vel *= 0.92;
-        const h = half();
-        if (x < -h) x += h; if (x > 0) x -= h;
-        track.style.transform = `translate3d(${x}px,0,0)`;
-        requestAnimationFrame(tick);
-      })();
-    }
+    const tracks = [...document.querySelectorAll('#dark .dark__track')].map((el) => ({ el, x: 0, speed: parseFloat(el.dataset.speed || '1') }));
+    let vel = 0;
+    ScrollTrigger.create({ start: 0, end: 'max', onUpdate: (self) => { vel = self.getVelocity() / 500; } });
+    (function tick() {
+      const kick = Math.min(10, Math.abs(vel)) * Math.sign(vel || 1);
+      tracks.forEach((t) => {
+        const half = t.el.scrollWidth / 2 || 1;
+        t.x -= (reducedMotion ? 0 : t.speed) + kick * Math.sign(t.speed);
+        if (t.x < -half) t.x += half; if (t.x > 0) t.x -= half;
+        t.el.style.transform = `translate3d(${t.x}px,0,0)`;
+      });
+      vel *= 0.92;
+      requestAnimationFrame(tick);
+    })();
   }
 
   /* ----- Progress bar, nav state ----- */
