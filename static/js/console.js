@@ -102,15 +102,15 @@ export function setupConsole({ reducedMotion = false, world = null } = {}) {
   }
   function reveal() {
     results.hidden = false;
+    document.getElementById('results-scene').hidden = false;
     if (window.gsap && !reducedMotion) {
       gsap.fromTo(results, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' });
       gsap.fromTo(results.querySelectorAll('.stat, .matrix, .downloads a, .rank'), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.8, ease: 'expo.out', stagger: 0.05, delay: 0.1 });
     }
-    window.ScrollTrigger && ScrollTrigger.refresh();
     requestAnimationFrame(() => {
-      window.ScrollTrigger && ScrollTrigger.refresh();
-      const y = results.getBoundingClientRect().top + window.scrollY - 24;
-      window.scrollTo({ top: y, behavior: reducedMotion ? 'auto' : 'smooth' });
+      const start = window.__vesperaResultsReady ? window.__vesperaResultsReady() : results.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: start + 2, behavior: reducedMotion ? 'auto' : 'smooth' });
+      if (world) world.arriveResults();
     });
   }
   function showClassify(r) {
@@ -130,7 +130,7 @@ export function setupConsole({ reducedMotion = false, world = null } = {}) {
     map.hidden = false;
     const info = world ? world.setResults(r) : null;
     const note = document.getElementById('map-note');
-    if (note) note.textContent = (info && !info.wide ? `the field is opened ${info.angleScale.toFixed(1)}× wider than it is on the sky · ` : '') + 'distance from the Sun on a log scale · the view drifts slowly';
+    if (note) note.textContent = (info && !info.wide ? `the field is opened ${info.angleScale.toFixed(1)}× wider than it is on the sky · ` : '') + 'distance from the Sun on a log scale · drag to turn · wheel to zoom';
     reveal();
   }
   function showCompare(r) {

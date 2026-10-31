@@ -1,5 +1,5 @@
-// Scroll drives the world. Each pinned section hands the world its progress;
-// the HTML on top reveals captions at the moments the camera arrives.
+// Scroll drives the world through one director: the scroll position decides exactly one
+// scene and one 0–1 progress, in both directions, so no two triggers ever fight over the camera.
 
 const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -9,67 +9,66 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
   const scrub = reducedMotion ? true : 0.6;
   const blackout = document.getElementById('blackout');
   const setDark = (d) => { blackout.style.opacity = d.toFixed(3); world && world.setDark(d); };
-  const pinned = (id, length, onUpdate) => {
-    const section = document.getElementById(id);
-    const stage = section.querySelector('.scene__stage');
-    return ScrollTrigger.create({ trigger: section, start: 'top top', end: '+=' + length, pin: stage, scrub, onUpdate });
-  };
   const show = (el, on) => el && el.classList.toggle('is-in', on);
 
-  /* ----- Hero: the transit pulls the screen into darkness ----- */
+  /* ----- Pinned scenes, in page order. Each gets a handler(progress). ----- */
+  const scenes = [];
+  function pin(id, length, handler) {
+    const section = document.getElementById(id);
+    const stage = section.querySelector('.scene__stage');
+    const st = ScrollTrigger.create({ trigger: section, start: 'top top', end: '+=' + length, pin: stage, scrub, anticipatePin: 1 });
+    const entry = { id, st, stage, handler };
+    scenes.push(entry);
+    return entry;
+  }
+
+  /* Hero: the eclipse over the first 84% of the pin, then the title card at a fixed speed */
   {
     const dark = document.getElementById('dark');
     const note = document.getElementById('hero-note');
     const copy = document.querySelector('.hero__copy');
-    pinned('hero', '230%', (self) => {
-      const p = self.progress;
-      world && world.set('hero', p);                                // the planet sits in front of the star around 45%
-      gsap.set(copy, { opacity: Math.max(0, 1 - p * 3), y: p * -80 });
-      note.classList.toggle('is-on', p > 0.1 && p < 0.3);
-      const d = smoothstep(0.515, 0.55, p);                         // totality at 0.52, hold the ring a beat
-      setDark(d);
-      // The title card: lines arrive one by one out of the black, tracking tightens as they land,
-      // and the card dissolves as the hero stage scrolls away.
-      const card = smoothstep(0.58, 0.7, p) * (1 - smoothstep(0.9, 1, p));
-      dark.style.opacity = card.toFixed(3);
-      dark.classList.toggle('is-on', p > 0.58);
-      dark.style.setProperty('--track', (0.35 * (1 - smoothstep(0.58, 0.8, p))).toFixed(3) + 'em');
+    pin('hero', '140%', (p) => {
+      world && world.set('hero', p);
+      gsap.set(copy, { opacity: Math.max(0, 1 - p * 3.5), y: p * -80 });
+      note.classList.toggle('is-on', p > 0.08 && p < 0.26);
+      setDark(smoothstep(0.43, 0.47, p));          // totality lands at 0.44
+      dark.classList.toggle('is-on', p > 0.5);       // the card plays once, by CSS, at its own speed
     });
     gsap.from('.hero__title .line > span', { yPercent: 110, duration: 1.3, ease: 'expo.out', stagger: 0.09, delay: 0.2 });
     gsap.from(['.hero__tag', '.hero__lede', '.hero__actions'], { y: 24, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.1, delay: 0.5 });
   }
 
-  /* ----- Method: light returns with the heading, then the sweep ----- */
+  /* Method: the light returns fast, then the sweep */
   {
+    const dark = document.getElementById('dark');
     const title = document.getElementById('method-title');
     const caps = [...document.querySelectorAll('#method .cap')];
     const readout = document.getElementById('sweep-readout');
-    pinned('method', '260%', (self) => {
-      const p = self.progress;
-      setDark(1 - smoothstep(0.02, 0.22, p));
+    pin('method', '240%', (p) => {
+      dark.classList.toggle('is-out', p > 0.01);
+      setDark(1 - smoothstep(0.02, 0.1, p));
       world && world.set('method', p);
-      show(title, p > 0.06);
-      caps.forEach((c, i) => c.classList.toggle('is-on', p >= [0.1, 0.34, 0.74][i] && p < [0.34, 0.74, 1.01][i]));
+      show(title, p > 0.04);
+      caps.forEach((c, i) => c.classList.toggle('is-on', p >= [0.08, 0.34, 0.74][i] && p < [0.34, 0.74, 1.01][i]));
       readout.classList.toggle('is-on', p > 0.2 && p < 0.96);
     });
   }
 
-  /* ----- Missions: three fields on the sky ----- */
+  /* Missions */
   {
     const title = document.getElementById('missions-title');
     const caps = [...document.querySelectorAll('#missions .mission')];
     const links = document.querySelector('#missions .mission__links');
-    pinned('missions', '240%', (self) => {
-      const p = self.progress;
+    pin('missions', '220%', (p) => {
       world && world.set('missions', p);
       show(title, p > 0.03);
       const third = p * 3;
       caps.forEach((c, i) => c.classList.toggle('is-on', third >= i && third < i + 1));
-      links && links.classList.toggle('is-on', p > 0.05);
+      links && links.classList.toggle('is-in', p > 0.05);
     });
   }
 
-  /* ----- Zone: the camera arrives, then the planet is pushed outward ----- */
+  /* Zone */
   {
     const section = document.getElementById('zone');
     const title = document.getElementById('zone-title');
@@ -83,8 +82,8 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
     };
     section.querySelector('[data-gauge="radius"]').classList.add('is-ok');
     section.querySelector('[data-gauge="teff"]').classList.add('is-ok');
-    function render(p) {
-      const au = 0.2 + 2.4 * p;
+    function render(t) {
+      const au = 0.2 + 2.4 * t;
       const period = Math.pow(au, 1.5) * 365.25;
       const teq = 255 / Math.sqrt(au);
       auOut.textContent = au.toFixed(2);
@@ -100,48 +99,88 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
       verdictEl.classList.toggle('is-ok', ok);
       verdictEl.textContent = ok ? 'Inside the window.' : teq > 310 ? 'Too close.' : period > 500 ? 'Temperate, but the year is too long.' : 'Too far.';
     }
-    pinned('zone', '240%', (self) => {
-      const p = self.progress;
+    pin('zone', '220%', (p) => {
       world && world.set('zone', p);
-      show(title, p > 0.06);                                   // the camera dashes in over the first 10%
+      show(title, p > 0.06);
       show(gauges, p > 0.1); show(verdictEl, p > 0.12); show(readout, p > 0.12);
-      const t = smoothstep(0.14, 1, p);                        // the planet moves only once we are there
+      const t = smoothstep(0.14, 1, p);
       world && world.setOrbit(t);
       render(t);
     });
     render(0);
   }
 
-  /* ----- Console and team: the world recedes ----- */
+  /* Console */
   {
     const title = document.getElementById('console-title');
     const grid = document.querySelector('.console__grid');
     const top = document.querySelector('.console__top');
-    pinned('console', '120%', (self) => {
-      const p = self.progress;
+    pin('console', '100%', (p) => {
       world && world.set('console', p);
-      show(title, p > 0.08);
-      grid.classList.toggle('is-in', p > 0.12);
-      top.classList.toggle('is-in', p > 0.08);
+      show(title, p > 0.06);
+      grid.classList.toggle('is-in', p > 0.1);
+      top.classList.toggle('is-in', p > 0.06);
     });
   }
-  ScrollTrigger.create({ trigger: '#results', start: 'top 60%', end: 'bottom 40%', onUpdate: (self) => { if (world && !document.getElementById('results').hidden) world.set('results', self.progress); } });
-  ScrollTrigger.create({ trigger: '#team', start: 'top bottom', end: 'bottom top', onUpdate: (self) => world && world.set('team', self.progress) });
+
+  /* Results: pinned once it exists (console.js calls window.__vesperaResultsReady) */
+  const resultsSection = document.getElementById('results-scene');
+  let resultsEntry = null;
+  function armResults() {
+    if (resultsEntry) { ScrollTrigger.refresh(); return resultsEntry; }
+    resultsEntry = pin('results-scene', '80%', (p) => { world && world.set('results', p); });
+    ScrollTrigger.refresh();
+    return resultsEntry;
+  }
+  window.__vesperaResultsReady = () => { armResults(); return resultsEntry.st.start; };
+
+  /* Team: a plain section after the last pin */
+  const teamST = ScrollTrigger.create({ trigger: '#team', start: 'top bottom', end: 'bottom top' });
+
+  /* ----- The director ----- */
+  let current = null;
+  function direct(y) {
+    const list = scenes.filter((s) => !s.st.disabled && s.st.end > s.st.start).sort((a, b) => a.st.start - b.st.start);
+    let hit = null;
+    for (const s of list) { if (y >= s.st.start && y <= s.st.end) { hit = s; break; } }
+    if (!hit) {
+      const last = list.filter((s) => s.st.end < y).pop();
+      if (last && teamST.start <= y) { world && world.set('team', teamST.progress); setTeamDone(last); return; }
+      hit = last || list[0];
+    }
+    const p = Math.min(1, Math.max(0, (y - hit.st.start) / (hit.st.end - hit.st.start)));
+    hit.handler(p);
+    // Fade a stage's HTML out when its scene is done, so the next pinned stage can cut in cleanly
+    list.forEach((s) => s.stage.classList.toggle('is-done', s !== hit));        // only the live scene shows its HTML
+    current = hit;
+  }
+  function setTeamDone(last) { scenes.forEach((s) => s.stage.classList.toggle('is-done', true)); }
+  ScrollTrigger.create({ start: 0, end: 'max', onUpdate: (self) => direct(self.scroll()), onRefresh: (self) => direct(self.scroll()) });
+  direct(window.scrollY);
+
+  /* ----- Results interaction: drag turns, wheel zooms, in the empty half only ----- */
+  {
+    const res = resultsSection;
+    const hud = res.querySelector('.results__hud');
+    const inHud = (e) => e.target.closest('.results__hud, a, button, .map');
+    let dragging = false, lx = 0, ly = 0;
+    res.addEventListener('pointerdown', (e) => { if (inHud(e)) return; e.preventDefault(); dragging = true; lx = e.clientX; ly = e.clientY; res.classList.add('is-dragging'); });
+    addEventListener('pointermove', (e) => { if (!dragging || !world) return; world.turnResults((e.clientX - lx) * 0.006, (e.clientY - ly) * 0.004); lx = e.clientX; ly = e.clientY; });
+    addEventListener('pointerup', () => { dragging = false; res.classList.remove('is-dragging'); });
+    res.addEventListener('wheel', (e) => {
+      if (inHud(e) || !resultsEntry || !world) return;
+      const y = window.scrollY;
+      if (y < resultsEntry.st.start + 10 || y > resultsEntry.st.end - 10) return;     // only while the scene is pinned
+      e.preventDefault();
+      world.zoomResults(Math.exp(-e.deltaY * 0.0012));
+    }, { passive: false });
+  }
 
   /* ----- Headings and reveals outside the pinned scenes ----- */
   ScrollTrigger.batch('#team-title', { start: 'top 85%', onEnter: (els) => els.forEach((el) => el.classList.add('is-in')), once: true });
   document.querySelectorAll('.team__copy').forEach((el) => el.setAttribute('data-reveal', ''));
   ScrollTrigger.batch('[data-reveal]', { start: 'top 88%', onEnter: (els) => els.forEach((el, i) => setTimeout(() => el.classList.add('is-in'), i * 90)), once: true });
   ScrollTrigger.create({ trigger: '#footer-word', start: 'top 95%', onEnter: () => document.getElementById('footer-word').classList.add('is-in'), once: true });
-
-  /* ----- Results: drag anywhere in the empty half to turn the cloud ----- */
-  {
-    const res = document.getElementById('results');
-    let dragging = false, lx = 0, ly = 0;
-    res.addEventListener('pointerdown', (e) => { if (e.target.closest('.results__hud, a, button')) return; dragging = true; lx = e.clientX; ly = e.clientY; res.classList.add('is-dragging'); });
-    addEventListener('pointermove', (e) => { if (!dragging || !world) return; world.turnResults((e.clientX - lx) * 0.006, (e.clientY - ly) * 0.004); lx = e.clientX; ly = e.clientY; });
-    addEventListener('pointerup', () => { dragging = false; res.classList.remove('is-dragging'); });
-  }
 
   /* ----- Progress bar, nav state ----- */
   const bar = document.getElementById('progress-bar');

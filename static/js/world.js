@@ -192,7 +192,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   const KF = {
     hero: [
       { t: 0, pos: [0.6, 0.5, 8.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
-      { t: 0.62, pos: [-1.4, 0.9, 7.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
+      { t: 0.8, pos: [-1.4, 0.9, 7.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
       { t: 1, pos: [-2, 7, 15], look: [0, 0, 0], fov: 46, dim: 0 },
     ],
     method: [
@@ -224,15 +224,31 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     target.look.set(lerp(a.look[0], b.look[0], u), lerp(a.look[1], b.look[1], u), lerp(a.look[2], b.look[2], u));
     target.fov = lerp(a.fov, b.fov, u); dim = lerp(a.dim, b.dim, u);
   }
+  const rp = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  function resultsPose(pos, look) {
+    const a = 0.7, R = results.radius * 2.4 * results.zoom;
+    pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.3, results.center.z + Math.cos(a) * R);
+    fwd.copy(results.center).sub(pos).normalize(); right.crossVectors(fwd, UP).normalize();
+    look.copy(results.center).addScaledVector(right, -results.radius * 0.95 * results.zoom);
+  }
   function set(name, p) {
     section = name; progress = clamp01(p);
     if (name === 'results') {
-      // Face the cloud from one side; it sits in the right half of the frame. Drag turns it.
-      const a = 0.7, R = results.radius * 2.4;
-      target.pos.set(results.center.x + Math.sin(a) * R, results.center.y + R * 0.3, results.center.z + Math.cos(a) * R);
-      fwd.copy(results.center).sub(target.pos).normalize(); right.crossVectors(fwd, UP).normalize();
-      target.look.copy(results.center).addScaledVector(right, -results.radius * 0.95);
+      // Arrive from the console pose over the first third, then hold. Drag turns the cloud, wheel zooms.
+      resultsPose(rp.pos, rp.look);
+      const u = smooth(clamp01(results.arrive));                      // arrival plays in time, not scroll
+      target.pos.set(lerp(0, rp.pos.x, u), lerp(5.5, rp.pos.y, u), lerp(9.5, rp.pos.z, u));
+      target.look.set(lerp(0, rp.look.x, u), lerp(0, rp.look.y, u), lerp(0, rp.look.z, u));
       target.fov = 44; dim = 0;
+      return;
+    }
+    if (name === 'team') {
+      // Leave from wherever the previous scene left the camera
+      if (resultPts) resultsPose(rp.pos, rp.look); else { rp.pos.set(0, 5.5, 9.5); rp.look.set(0, 0, 0); }
+      const u = smooth(progress);
+      target.pos.set(lerp(rp.pos.x, 3, u), lerp(rp.pos.y, 3, u), lerp(rp.pos.z, 48, u));
+      target.look.set(lerp(rp.look.x, 0, u), lerp(rp.look.y, 0, u), lerp(rp.look.z, 0, u));
+      target.fov = 44; dim = lerp(0.4, 0.7, u);
       return;
     }
     if (name === 'missions') {
@@ -246,9 +262,9 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     keyAt(KF[name] || KF.hero, progress);
   }
 
-  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1, yaw: 0, pitch: 0 };
+  const results = { center: new THREE.Vector3(0, 0, -20), radius: 20, wide: true, angleScale: 1, yaw: 0, pitch: 0, zoom: 1, arrive: 0 };
   const resultGroup = new THREE.Group(); resultGroup.visible = false; scene.add(resultGroup);
-  const resultMat = new THREE.PointsMaterial({ size: 0.5, map: dot, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+  const resultMat = new THREE.PointsMaterial({ size: 0.62, map: dot, vertexColors: true, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
   let resultPts = null;
   function setResults({ pointscand = [], pointsconf = [] }) {
     const D2R = Math.PI / 180;
@@ -289,7 +305,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     resultPts = new THREE.Points(g, resultMat); resultGroup.add(resultPts);
     resultGroup.position.copy(c);
     results.center.copy(c); results.radius = Math.max(8, far * 0.75); results.wide = wide; results.angleScale = angleScale;
-    results.yaw = 0; results.pitch = 0; resultGroup.rotation.set(0, 0, 0);
+    results.yaw = 0; results.pitch = 0; results.zoom = 1; resultGroup.rotation.set(0, 0, 0);
     return results;
   }
 
@@ -309,8 +325,10 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     requestAnimationFrame(frame);
     if (!visible) return;
     const time = clock.getElapsedTime();
-    resultGroup.visible = section === 'results' && !!resultPts;
-    if (resultPts && section === 'results') { resultGroup.rotation.y = results.yaw + (reducedMotion ? 0 : time * 0.03); resultGroup.rotation.x = results.pitch; }
+    const showRes = !!resultPts && (section === 'results' || (section === 'team' && progress < 0.4));
+    resultGroup.visible = showRes;
+    resultMat.opacity = section === 'results' ? 1 : section === 'team' ? Math.max(0, 1 - progress / 0.35) : 0;
+    if (resultPts && showRes) { resultGroup.rotation.y = results.yaw + (reducedMotion ? 0 : time * 0.03); resultGroup.rotation.x = results.pitch; }
     sunMat.uniforms.uTime.value = reducedMotion ? 0 : time;
     sun.rotation.y = reducedMotion ? 0 : time * 0.02;
 
@@ -323,7 +341,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     // Stage A (p 0.06–0.30): a small transit, left to right across the star, then gone.
     // Gap (0.30–0.36): nothing. Stage B (0.36–0.52): the same world comes back huge, just in
     // front of the lens, and slides in from the left edge until it covers the star exactly.
-    const p = section === 'hero' ? progress : 0;
+    const p = section === 'hero' ? progress / 0.84 : 0;
     const sA = clamp01((p - 0.06) / 0.24), sB = clamp01((p - 0.36) / 0.16);
     let covered = 0;
     if (section === 'hero' && p < 0.32) {
@@ -375,7 +393,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     sweep.scale.setScalar(Math.max(0.01, sweepTarget / 6));
     sweep.material.opacity = section === 'method' && progress > 0.1 && progress < 0.9 ? 0.6 : 0;
     catalog.rotation.y = reducedMotion ? 0 : time * 0.02;
-    catalog.visible = section !== 'results';
+    catalog.visible = section !== 'results' && !(section === 'team' && resultPts);
     catMat.opacity = (section === 'hero' ? 0.35 : section === 'console' ? 0.45 : (1 - dim * 0.6)) * (1 - dark);
 
     // Missions: the sky and its fields
@@ -383,7 +401,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     skySphere.material.opacity += ((inSky ? 0.035 : 0) - skySphere.material.opacity) * 0.08;
     const third = inSky ? progress * 3 : -1;
     const fade = (idx) => Math.max(0, 1 - Math.abs(third - (idx + 0.5)) * 1.6);
-    [fields.kepler, fields.k2, fields.tess].forEach((g, i) => g.children.forEach((m) => { m.material.opacity += (fade(i) * 0.7 - m.material.opacity) * 0.1; }));
+    [fields.kepler, fields.k2, fields.tess].forEach((g, i) => g.children.forEach((m) => { m.material.opacity += (fade(i) * 0.7 - m.material.opacity) * (inSky ? 0.1 : 0.3); }));
     sky.rotation.y = reducedMotion ? 0 : time * 0.01;
 
     // Zone: rings, annulus and the pushed planet
@@ -406,5 +424,12 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   const setDark = (d) => { dark = clamp01(d); };
   const setOrbit = (t) => { orbitT = clamp01(t); };
   const turnResults = (dx, dy) => { results.yaw += dx; results.pitch = Math.max(-1.2, Math.min(1.2, results.pitch + dy)); };
-  return { set, setDark, setOrbit, setResults, turnResults, resize };
+  const arriveResults = () => {
+    results.arrive = 0;
+    const o = { v: 0 };
+    if (window.gsap && !reducedMotion) window.gsap.to(o, { v: 1, duration: 1.4, ease: 'power3.inOut', onUpdate: () => { results.arrive = o.v; if (section === 'results') set('results', progress); } });
+    else results.arrive = 1;
+  };
+  const zoomResults = (f) => { results.zoom = Math.max(0.3, Math.min(2.2, results.zoom * f)); if (section === 'results') set('results', progress); };
+  return { set, setDark, setOrbit, setResults, turnResults, zoomResults, arriveResults, resize };
 }

@@ -25,7 +25,15 @@
 <body>
   <a class="skip" href="#console">Skip to the classifier</a>
   <canvas id="world" class="world" aria-hidden="true"></canvas>
-  <div class="blackout" id="blackout" aria-hidden="true"></div>
+  <div class="blackout" id="blackout" aria-hidden="true">
+    <div class="dark" id="dark" aria-hidden="true">
+      <p class="dark__kicker hud-label">the signal</p>
+      <p class="dark__line dark__line--1">One part</p>
+      <p class="dark__line dark__line--2">in twelve</p>
+      <p class="dark__line dark__line--3">thousand</p>
+      <p class="dark__caption hud-label">that is how much light an Earth hides · the model looks for exactly that</p>
+    </div>
+  </div>
   <div class="grain" aria-hidden="true"></div>
   <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
 
@@ -66,13 +74,6 @@
         </div>
         <p class="hero__note hud-label" id="hero-note"><span>transit</span> an Earth-size world takes 84 parts per million of the light</p>
         <p class="hero__hint hud-label" aria-hidden="true">scroll</p>
-        <div class="dark" id="dark" aria-hidden="true">
-          <p class="dark__kicker hud-label">the signal</p>
-          <p class="dark__line dark__line--1">One part</p>
-          <p class="dark__line dark__line--2">in twelve</p>
-          <p class="dark__line dark__line--3">thousand</p>
-          <p class="dark__caption hud-label">that is how much light an Earth hides · the model looks for exactly that</p>
-        </div>
       </div>
     </section>
 
@@ -192,8 +193,13 @@
           </fieldset>
         </form>
       </div>
-      <div class="wrap">
-        <section class="results" id="results" hidden aria-live="polite" aria-labelledby="results-title">
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section class="scene results-scene" id="results-scene" hidden>
+      <div class="scene__stage results__stage">
+        <div class="wrap">
+        <div class="results" id="results" hidden aria-live="polite" aria-labelledby="results-title">
           <div class="results__hud">
             <div class="results__head">
               <h3 id="results-title">Results</h3>
@@ -227,7 +233,8 @@
               <li><i style="--c:#6e6a64"></i>confirmed</li>
             </ul>
           </div>
-        </section>
+        </div>
+        </div>
       </div>
     </section>
 
