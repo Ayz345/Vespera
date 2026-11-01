@@ -13,10 +13,15 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
 
   /* ----- Pinned scenes, in page order. Each gets a handler(progress). ----- */
   const scenes = [];
+  const small = window.matchMedia('(max-width: 900px)').matches;
+  const TALL = new Set(['console', 'results-scene']);
   function pin(id, length, handler) {
     const section = document.getElementById(id);
     const stage = section.querySelector('.scene__stage');
-    const st = ScrollTrigger.create({ trigger: section, start: 'top top', end: '+=' + length, pin: stage, scrub, anticipatePin: 1 });
+    const free = small && TALL.has(id);
+    const st = free
+      ? ScrollTrigger.create({ trigger: section, start: 'top 60%', end: 'bottom 40%' })
+      : ScrollTrigger.create({ trigger: section, start: 'top top', end: '+=' + length, pin: stage, scrub, anticipatePin: 1 });
     const entry = { id, st, stage, handler };
     scenes.push(entry);
     return entry;
@@ -133,7 +138,7 @@ export function setupScenes({ world, reducedMotion = false } = {}) {
     ScrollTrigger.refresh();
     return resultsEntry;
   }
-  window.__vesperaResultsReady = () => { armResults(); return resultsEntry.st.start; };
+  window.__vesperaResultsReady = () => { armResults(); return small ? resultsSection.getBoundingClientRect().top + window.scrollY - 12 : resultsEntry.st.start; };
 
   /* Team: a plain section after the last pin */
   const teamST = ScrollTrigger.create({ trigger: '#team', start: 'top bottom', end: 'bottom top' });

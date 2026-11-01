@@ -188,7 +188,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
 
   // Camera keyframes. Each section's last key equals the next section's first key,
   // so the camera never moves on its own between pinned scenes.
-  const Z = small ? 1.5 : 1;
+  const Z = small ? 2.3 : 1;
   const KF = {
     hero: [
       { t: 0, pos: [0.6, 0.5, 8.6 * Z], look: [0, 0.2, 0], fov: 42, dim: 0 },
@@ -207,11 +207,11 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     ],
     console: [
       { t: 0, pos: [5, 7, 14], look: [0, 0, 0], fov: 44, dim: 0 },
-      { t: 0.35, pos: [0, 5.5, 9.5], look: [0, 0, 0], fov: 42, dim: 0.4 },
-      { t: 1, pos: [0, 5.5, 9.5], look: [0, 0, 0], fov: 42, dim: 0.4 },
+      { t: 0.35, pos: [0, 5.5 * Z, 9.5 * Z], look: [0, 0, 0], fov: 42, dim: 0.4 },
+      { t: 1, pos: [0, 5.5 * Z, 9.5 * Z], look: [0, 0, 0], fov: 42, dim: 0.4 },
     ],
     team: [
-      { t: 0, pos: [0, 5.5, 9.5], look: [0, 0, 0], fov: 44, dim: 0.65 },
+      { t: 0, pos: [0, 5.5 * Z, 9.5 * Z], look: [0, 0, 0], fov: 44, dim: 0.65 },
       { t: 1, pos: [3, 3, 48], look: [0, 0, 0], fov: 44, dim: 0.7 },
     ],
   };
@@ -229,10 +229,10 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     // Orbit the camera around the cloud's centre: Earth, axis and cloud all turn together on screen
     // Pivot halfway between Earth (origin) and the cloud, so both stay in frame while turning
     const pv = tmp.copy(results.center).multiplyScalar(0.55);
-    const a = 0.7 + results.yaw, el = Math.max(-1.2, Math.min(1.2, 0.3 + results.pitch)), R = (results.radius * 1.9 + results.center.length() * 0.6) * results.zoom;
+    const a = 0.7 + results.yaw, el = Math.max(-1.2, Math.min(1.2, 0.3 + results.pitch)), R = (results.radius * 1.9 + results.center.length() * 0.6) * results.zoom * (small ? 1.7 : 1);
     pos.set(pv.x + Math.sin(a) * Math.cos(el) * R, pv.y + Math.sin(el) * R, pv.z + Math.cos(a) * Math.cos(el) * R);
     fwd.copy(pv).sub(pos).normalize(); right.crossVectors(fwd, UP).normalize();
-    look.copy(pv).addScaledVector(right, -results.radius * 0.6 * results.zoom);
+    look.copy(pv).addScaledVector(right, small ? 0 : -results.radius * 0.6 * results.zoom);
   }
   function set(name, p) {
     section = name; progress = clamp01(p);
@@ -240,14 +240,14 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
       // Arrive from the console pose over the first third, then hold. Drag turns the cloud, wheel zooms.
       resultsPose(rp.pos, rp.look);
       const u = smooth(clamp01(results.arrive));                      // arrival plays in time, not scroll
-      target.pos.set(lerp(0, rp.pos.x, u), lerp(5.5, rp.pos.y, u), lerp(9.5, rp.pos.z, u));
+      target.pos.set(lerp(0, rp.pos.x, u), lerp(5.5 * Z, rp.pos.y, u), lerp(9.5 * Z, rp.pos.z, u));
       target.look.set(lerp(0, rp.look.x, u), lerp(0, rp.look.y, u), lerp(0, rp.look.z, u));
       target.fov = 44; dim = 0;
       return;
     }
     if (name === 'team') {
       // Leave from wherever the previous scene left the camera
-      if (resultPts) resultsPose(rp.pos, rp.look); else { rp.pos.set(0, 5.5, 9.5); rp.look.set(0, 0, 0); }
+      if (resultPts) resultsPose(rp.pos, rp.look); else { rp.pos.set(0, 5.5 * Z, 9.5 * Z); rp.look.set(0, 0, 0); }
       const u = smooth(progress);
       target.pos.set(lerp(rp.pos.x, 3, u), lerp(rp.pos.y, 3, u), lerp(rp.pos.z, 48, u));
       target.look.set(lerp(rp.look.x, 0, u), lerp(rp.look.y, 0, u), lerp(rp.look.z, 0, u));
@@ -437,7 +437,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
 
     // Missions: the sky and its fields
     const inSky = section === 'missions';
-    skySphere.material.opacity += ((inSky ? 0.035 : 0) - skySphere.material.opacity) * 0.08;
+    skySphere.material.opacity += ((inSky ? (small ? 0.015 : 0.035) : 0) - skySphere.material.opacity) * 0.08;
     const third = inSky ? progress * 3 : -1;
     const fade = (idx) => Math.max(0, 1 - Math.abs(third - (idx + 0.5)) * 1.6);
     [fields.kepler, fields.k2, fields.tess].forEach((g, i) => g.children.forEach((m) => { m.material.opacity += (fade(i) * 0.7 - m.material.opacity) * (inSky ? 0.1 : 0.3); }));
