@@ -7,7 +7,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from xgboost import XGBClassifier
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request, send_from_directory, jsonify, redirect
+from werkzeug.utils import secure_filename
 import os
 import json
 UPLOAD_FOLDER = 'uploads'
@@ -169,84 +170,129 @@ def to_cartesian(df, dataset):
     y = dist * np.cos(dec) * np.sin(ra)
     z = dist * np.sin(dec)
     points = []
-    for name, xx, yy, zz, Habitability in zip(df[name_col], x, y, z, df['habitable_prediction']):
-        points.append({"name": str(name), "x": float(xx), "y": float(yy), "z": float(zz),"Habitability":str(Habitability)})
+    ra_deg = df["ra"].astype(float).values
+    dec_deg = df["dec"].astype(float).values
+    for name, xx, yy, zz, Habitability, r, d, dd in zip(df[name_col], x, y, z, df['habitable_prediction'], ra_deg, dec_deg, dist):
+        points.append({"name": str(name), "x": float(xx), "y": float(yy), "z": float(zz), "Habitability": str(Habitability),
+                       "ra": float(r), "dec": float(d), "dist": float(dd)})
     return points
+DATASETS = {"kepler", "k2", "tess"}
+MODELS = {"logreg": "Logistic regression", "rf": "Random forest", "svm": "Support vector machine", "xgb": "XGBoost"}
+
+def load_upload(file, dataset_type):
+    """Save an uploaded table and read it. Returns (df, error_message)."""
+    if dataset_type not in DATASETS:
+        return None, "Pick a mission: Kepler, K2 or TESS."
+    if file is None or not file.filename:
+        return None, "Choose a CSV file to upload."
+    filename = secure_filename(file.filename) or "upload.csv"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    try:
+        df = pd.read_csv(filepath, comment='#')
+    except Exception:
+        return None, "The file could not be read as CSV. Export it again from the NASA Exoplanet Archive."
+    return df, None
+
+def explain_failure(exc, dataset_type):
+    if isinstance(exc, KeyError):
+        return (f"The file does not have the columns a {dataset_type.upper()} table should have "
+                f"(missing {exc}). Check that you picked the mission the file came from.")
+    if isinstance(exc, ValueError):
+        return "The table has too few labelled rows to train on. Upload the full archive export, not a filtered one."
+    return f"Something went wrong while training: {exc}"
+
 @app.route("/")
 def home():
-    return render_template("home.html")
-@app.route("/analyze", methods=["GET", "POST"])
-def analyze():
-    if request.method == "POST":
-        dataset_type = request.form.get("dataset")
-        model_choice = request.form.get("model_choice")
-        file = request.files['file']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filepath)
-        df = pd.read_csv(filepath, comment='#')
-        results_df, accuracy, confmatrix, classreport, coefs, cols, dfconfirmedfor3d, results_dfwProba = model1(df, dataset_type, model_choice)
-        csv_file = f"Predictions_{dataset_type}.csv"
-        csv_filewP=f"Predictions(Probabilistic)_{dataset_type}.csv"
-        txt_file = f"Performance_{dataset_type}.txt"
-        csv_path = os.path.join(app.config['RESULT_FOLDER'], csv_file)
-        csv_pathwP=os.path.join(app.config['RESULT_FOLDER'], csv_filewP)
-        with open(csv_path, "w") as f:
-            f.write("#Created by Vespera\n")
-        results_df.to_csv(csv_path, index=False, mode="a")
-        with open(csv_pathwP, "w") as f:
-            f.write("#Created by Vespera\n")
-        results_dfwProba.to_csv(csv_pathwP, index=False, mode="a")
-        txt_path = os.path.join(app.config['RESULT_FOLDER'], txt_file)
-        with open(txt_path, 'w') as f:
-            f.write("#Created by Vespera\n")
-            f.write(f'Model Name:{model_choice}\n\n')
-            f.write('--- Model Performance Metrics ---\n\n')
-            f.write(f'Accuracy: {accuracy:.4f}\n\n')
-            f.write('Confusion Matrix:\n')
-            f.write(str(confmatrix) + '\n\n')
-            f.write('Classification Report:\n') 
-            f.write(classreport + '\n')
-        pointscand = to_cartesian(results_df[results_df.iloc[:,-1]==1], dataset_type)
-        pointsconf = to_cartesian(dfconfirmedfor3d, dataset_type)
-        return render_template("analyze.html",
-                               csv_file=csv_file,
-                               txt_file=txt_file,
-                               csv_filewP=csv_filewP,
-                               accuracy=accuracy,
-                               dataset=dataset_type,
-                               pointscand=json.dumps(pointscand),
-                               pointsconf=json.dumps(pointsconf))
-    return render_template("analyze.html")
-@app.route("/about")
-def download():
-    return render_template("about.html")
+    return render_template("index.html")
+
+# Old page URLs now point at the sections of the single page.
+@app.route("/analyze")
+@app.route("/compare")
+def legacy_tool():
+    return redirect("/#console")
+
 @app.route("/data")
-def data():
-    return render_template("data.html")
-@app.route("/compare", methods=["GET", "POST"])
-def compare():
-    if request.method == "POST":
-        dataset_type = request.form.get("dataset_compare")
-        file = request.files['file_compare']
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filepath)
-        df = pd.read_csv(filepath, comment='#')
-        models = {
-            "Logistic Regression": "logreg",
-            "Random Forest": "rf",
-            "SVM": "svm",
-            "XGBoost": "xgb"
-        }
-        results = []
-        for name, key in models.items():
-            _, acc, _, _, _, _, _,_  = model1(df, dataset_type, model_choice=key)
-            results.append({"Model": name, "Accuracy": round(acc, 4)})
-        comp_df = pd.DataFrame(results)
-        return render_template("compare.html", comparison_table=comp_df.to_html(index=False))
-    return render_template("compare.html")
+def legacy_data():
+    return redirect("/#missions")
+
+@app.route("/about")
+def legacy_about():
+    return redirect("/#team")
+
+@app.route("/api/analyze", methods=["POST"])
+def api_analyze():
+    dataset_type = request.form.get("dataset")
+    model_choice = request.form.get("model_choice")
+    if model_choice not in MODELS:
+        model_choice = "logreg"
+    df, error = load_upload(request.files.get('file'), dataset_type)
+    if error:
+        return jsonify(error=error), 400
+    try:
+        results_df, accuracy, confmatrix, classreport, coefs, cols, dfconfirmedfor3d, results_dfwProba = model1(df, dataset_type, model_choice)
+    except Exception as exc:
+        return jsonify(error=explain_failure(exc, dataset_type)), 400
+    csv_file = f"Predictions_{dataset_type}.csv"
+    csv_filewP = f"Predictions(Probabilistic)_{dataset_type}.csv"
+    txt_file = f"Performance_{dataset_type}.txt"
+    csv_path = os.path.join(app.config['RESULT_FOLDER'], csv_file)
+    csv_pathwP = os.path.join(app.config['RESULT_FOLDER'], csv_filewP)
+    with open(csv_path, "w") as f:
+        f.write("#Created by Vespera\n")
+    results_df.to_csv(csv_path, index=False, mode="a")
+    with open(csv_pathwP, "w") as f:
+        f.write("#Created by Vespera\n")
+    results_dfwProba.to_csv(csv_pathwP, index=False, mode="a")
+    txt_path = os.path.join(app.config['RESULT_FOLDER'], txt_file)
+    with open(txt_path, 'w') as f:
+        f.write("#Created by Vespera\n")
+        f.write(f'Model Name:{model_choice}\n\n')
+        f.write('--- Model Performance Metrics ---\n\n')
+        f.write(f'Accuracy: {accuracy:.4f}\n\n')
+        f.write('Confusion Matrix:\n')
+        f.write(str(confmatrix) + '\n\n')
+        f.write('Classification Report:\n')
+        f.write(classreport + '\n')
+    predicted = results_df[results_df.iloc[:, -1] == 1]
+    pointscand = to_cartesian(predicted, dataset_type)
+    pointsconf = to_cartesian(dfconfirmedfor3d, dataset_type)
+    return jsonify(
+        dataset=dataset_type,
+        model=model_choice,
+        model_name=MODELS[model_choice],
+        accuracy=float(accuracy),
+        confusion=[[int(v) for v in row] for row in confmatrix],
+        report=classreport,
+        counts=dict(
+            candidates=int(len(results_df)),
+            predicted_planets=int(len(predicted)),
+            habitable=int((predicted["habitable_prediction"] == "Habitable").sum()),
+            confirmed=int(len(dfconfirmedfor3d)),
+        ),
+        files=dict(predictions=csv_file, probabilities=csv_filewP, report=txt_file),
+        pointscand=pointscand,
+        pointsconf=pointsconf,
+    )
+
+@app.route("/api/compare", methods=["POST"])
+def api_compare():
+    dataset_type = request.form.get("dataset")
+    df, error = load_upload(request.files.get('file'), dataset_type)
+    if error:
+        return jsonify(error=error), 400
+    results = []
+    try:
+        for key, name in MODELS.items():
+            _, acc, _, _, _, _, _, _ = model1(df, dataset_type, model_choice=key)
+            results.append({"model": key, "name": name, "accuracy": round(float(acc), 4)})
+    except Exception as exc:
+        return jsonify(error=explain_failure(exc, dataset_type)), 400
+    return jsonify(dataset=dataset_type, results=results)
+
 @app.route('/results/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['RESULT_FOLDER'], filename, as_attachment=True)
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=int(os.environ.get("PORT", 5000)))
 

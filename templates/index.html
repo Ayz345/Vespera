@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#070707">
+  <title>Vespera · Exoplanet habitability classifier</title>
+  <meta name="description" content="Vespera reads NASA's Kepler, K2 and TESS catalogs, scores every unconfirmed candidate with machine learning, and flags the worlds a human could call home.">
+  <link rel="icon" href="{{ url_for('static', filename='images/Vespera_logo.ico') }}">
+  <script>document.documentElement.classList.replace('no-js', 'js'); window.__errs = []; addEventListener('error', function (e) { window.__errs.push(String(e.message || e.error)); }); addEventListener('unhandledrejection', function (e) { window.__errs.push('rejection: ' + String(e.reason)); });</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#console">Skip to the classifier</a>
+  <canvas id="world" class="world" aria-hidden="true"></canvas>
+  <div class="blackout" id="blackout" aria-hidden="true">
+    <div class="dark" id="dark" aria-hidden="true">
+      <p class="dark__kicker hud-label">the signal</p>
+      <p class="dark__line dark__line--1">One part</p>
+      <p class="dark__line dark__line--2">in twelve</p>
+      <p class="dark__line dark__line--3">thousand</p>
+      <p class="dark__caption hud-label">that is how much light an Earth hides · the model looks for exactly that</p>
+    </div>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="#top" aria-label="Vespera, back to top">
+      <svg class="nav__mark" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="14" fill="currentColor"/>
+        <path d="M5 33c9 6 29 1 38-13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span>Vespera</span>
+    </a>
+    <nav class="nav__links" aria-label="Sections">
+      <a href="#method">Method</a>
+      <a href="#missions">Missions</a>
+      <a href="#zone">Zone</a>
+      <a href="#team">Team</a>
+    </nav>
+    <a class="btn btn--primary nav__cta" href="#console" data-magnetic>Run it</a>
+  </header>
+
+  <main id="top">
+
+    <!-- ================= HERO ================= -->
+    <section class="hero scene" id="hero" aria-label="Introduction">
+      <div class="scene__stage hero__stage">
+        <div class="hero__copy">
+          <p class="hud-label hero__tag">Built for the NASA Space Apps Challenge 2025</p>
+          <h1 class="hero__title" data-split>
+            <span class="line"><span>Worlds</span></span>
+            <span class="line"><span>hiding in</span></span>
+            <span class="line"><span>the light</span></span>
+          </h1>
+          <p class="hero__lede">NASA's candidates, classified. The habitable ones, flagged.</p>
+          <div class="hero__actions">
+            <a class="btn btn--primary btn--big" href="#console" data-magnetic>Run the classifier</a>
+            <a class="btn btn--ghost btn--big" href="#method" data-magnetic>Watch the method</a>
+          </div>
+        </div>
+        <p class="hero__note hud-label" id="hero-note"><span>transit</span> an Earth-size world takes 84 parts per million of the light</p>
+        <p class="hero__hint hud-label" aria-hidden="true">scroll</p>
+      </div>
+    </section>
+
+    <!-- ================= METHOD ================= -->
+    <section class="scene method" id="method" aria-labelledby="method-title">
+      <div class="scene__stage method__stage">
+        <div class="wrap overlay">
+          <h2 class="section-title" id="method-title" data-split><span class="line"><span>Row in.</span></span> <span class="line"><span>Verdict out.</span></span></h2>
+          <div class="caps">
+            <p class="cap"><span class="hud-label">01</span>Every labelled row teaches the model.</p>
+            <p class="cap"><span class="hud-label">02</span>One sweep scores every candidate.</p>
+            <p class="cap"><span class="hud-label">03</span>Planets in green. False positives in red.</p>
+          </div>
+          <div class="readout" id="sweep-readout">
+            <span class="readout__v"><span id="sweep-count">0</span></span>
+            <span class="hud-label">planets found of <span id="sweep-total">0</span> rows</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MISSIONS ================= -->
+    <section class="scene missions" id="missions" aria-labelledby="missions-title">
+      <div class="scene__stage missions__stage">
+        <div class="wrap missions__head overlay">
+          <h2 class="section-title" id="missions-title" data-split><span class="line"><span>Three eyes</span></span> <span class="line"><span>on the sky</span></span></h2>
+        </div>
+        <div class="wrap missions__caps">
+          <article class="mission" data-mission="kepler">
+            <h3>Kepler</h3>
+            <p class="hud-label">2009–2013 · one field in Cygnus · 150 000 stars</p>
+            <p class="mission__acc">90<span>%</span></p>
+          </article>
+          <article class="mission" data-mission="k2">
+            <h3>K2</h3>
+            <p class="hud-label">2014–2018 · campaigns along the ecliptic</p>
+            <p class="mission__acc">97<span>%</span></p>
+          </article>
+          <article class="mission" data-mission="tess">
+            <h3>TESS</h3>
+            <p class="hud-label">2018 → · whole sky · 27-day strips</p>
+            <p class="mission__acc">85<span>%</span></p>
+          </article>
+          <div class="mission__links">
+            <span class="hud-label">export from the archive</span>
+            <a class="btn btn--ghost" href="https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=cumulative" data-magnetic>Kepler</a>
+            <a class="btn btn--ghost" href="https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=k2pandc" data-magnetic>K2</a>
+            <a class="btn btn--ghost" href="https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=TOI" data-magnetic>TESS</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HABITABLE ZONE ================= -->
+    <section class="scene zone" id="zone" aria-labelledby="zone-title">
+      <div class="scene__stage zone__stage">
+        <div class="wrap zone__grid">
+          <div class="zone__copy">
+            <h2 class="section-title" id="zone-title" data-split><span class="line"><span>Push it</span></span> <span class="line"><span>outward</span></span></h2>
+            <div class="gauges">
+              <div class="gauge" data-gauge="period"><div class="gauge__head"><span class="hud-label">period</span><output id="g-period">88 d</output></div><div class="gauge__bar"><span class="gauge__win" style="left:5%;width:45%"></span><span class="gauge__pin" id="p-period"></span></div></div>
+              <div class="gauge" data-gauge="radius"><div class="gauge__head"><span class="hud-label">radius</span><output id="g-radius">1.0 R⊕</output></div><div class="gauge__bar"><span class="gauge__win" style="left:10%;width:40%"></span><span class="gauge__pin" id="p-radius" style="left:20%"></span></div></div>
+              <div class="gauge" data-gauge="teff"><div class="gauge__head"><span class="hud-label">star</span><output id="g-teff">5 772 K</output></div><div class="gauge__bar"><span class="gauge__win" style="left:36%;width:30%"></span><span class="gauge__pin" id="p-teff" style="left:55.4%"></span></div></div>
+              <div class="gauge" data-gauge="teq"><div class="gauge__head"><span class="hud-label">planet</span><output id="g-teq">500 K</output></div><div class="gauge__bar"><span class="gauge__win" style="left:30%;width:21.7%"></span><span class="gauge__pin" id="p-teq"></span></div></div>
+            </div>
+            <p class="zone__verdict" id="zone-verdict" aria-live="polite">Too close.</p>
+          </div>
+          <div class="zone__readout" aria-hidden="true">
+            <span class="readout__v"><span id="zone-au">0.20</span></span>
+            <span class="hud-label">astronomical units from the star</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CONSOLE: the aperture ================= -->
+    <section class="scene console" id="console" aria-labelledby="console-title">
+      <div class="scene__stage console__stage">
+        <div class="wrap console__top">
+          <h2 class="console__title" id="console-title" data-split><span class="line"><span>Run it on a real table</span></span></h2>
+          <p class="hud-label console__sub">your rows train the model · a few seconds · runs on our server</p>
+        </div>
+        <form class="wrap console__grid" id="run-form" novalidate>
+          <fieldset class="opts opts--left">
+            <legend class="hud-label"><span>01</span> mission</legend>
+            <label class="opt"><input type="radio" name="dataset" value="kepler" checked><span class="opt__name">Kepler</span><span class="opt__sub hud-label">one field · 8 features</span></label>
+            <label class="opt"><input type="radio" name="dataset" value="k2"><span class="opt__name">K2</span><span class="opt__sub hud-label">ecliptic · 5 features</span></label>
+            <label class="opt"><input type="radio" name="dataset" value="tess"><span class="opt__name">TESS</span><span class="opt__sub hud-label">whole sky · 9 features</span></label>
+          </fieldset>
+
+          <div class="aperture-wrap">
+            <label class="aperture" id="drop">
+              <input type="file" id="file" name="file" accept=".csv,text/csv">
+              <span class="aperture__ring aperture__ring--outer" aria-hidden="true"></span>
+              <span class="aperture__ring aperture__ring--inner" aria-hidden="true"></span>
+              <span class="aperture__tick aperture__tick--n" aria-hidden="true"></span><span class="aperture__tick aperture__tick--s" aria-hidden="true"></span><span class="aperture__tick aperture__tick--e" aria-hidden="true"></span><span class="aperture__tick aperture__tick--w" aria-hidden="true"></span>
+              <span class="aperture__text">
+                <span class="hud-label aperture__step"><span>03</span> table</span>
+                <span class="drop__big" id="drop-name">Drop the CSV</span>
+                <span class="hud-label drop__meta" id="drop-hint">archive export · values only · no errors · or click</span>
+              </span>
+            </label>
+            <button class="launch__run" type="submit" id="run-btn" data-magnetic>
+              <span class="launch__fill" id="run-fill" aria-hidden="true"></span>
+              <span class="launch__text"><span class="btn__label" id="run-label">Run the model</span><span class="hud-label" id="run-status" aria-live="polite">trains on your rows</span></span>
+              <span class="launch__arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+
+          <fieldset class="opts opts--right">
+            <legend class="hud-label"><span>02</span> model</legend>
+            <label class="opt"><input type="radio" name="model_choice" value="logreg"><span class="opt__name">Logistic</span><span class="opt__sub hud-label">linear · fast</span></label>
+            <label class="opt"><input type="radio" name="model_choice" value="rf" checked><span class="opt__name">Forest</span><span class="opt__sub hud-label">trees voting</span></label>
+            <label class="opt"><input type="radio" name="model_choice" value="svm"><span class="opt__name">SVM</span><span class="opt__sub hud-label">widest margin</span></label>
+            <label class="opt"><input type="radio" name="model_choice" value="xgb"><span class="opt__name">XGBoost</span><span class="opt__sub hud-label">boosted trees</span></label>
+            <label class="opt opt--all"><input type="radio" name="model_choice" value="all"><span class="opt__name">All four</span><span class="opt__sub hud-label">compare · rank</span></label>
+          </fieldset>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section class="scene results-scene" id="results-scene" hidden>
+      <div class="scene__stage results__stage">
+        <div class="wrap">
+        <div class="results" id="results" hidden aria-live="polite" aria-labelledby="results-title">
+          <div class="results__hud">
+            <div class="results__head">
+              <h3 id="results-title">Results</h3>
+              <p class="hud-label" id="results-sub"></p>
+            </div>
+            <div class="results__grid" id="results-classify">
+              <div class="stat stat--big"><span class="stat__v"><span id="r-acc">0</span>%</span><span class="hud-label">accuracy, held-out rows</span></div>
+              <div class="stat"><span class="stat__v" id="r-cand">0</span><span class="hud-label">candidates scored</span></div>
+              <div class="stat"><span class="stat__v" id="r-planets">0</span><span class="hud-label">predicted planets</span></div>
+              <div class="stat stat--hab"><span class="stat__v" id="r-hab">0</span><span class="hud-label">in the habitable window</span></div>
+              <div class="matrix" aria-label="Confusion matrix">
+                <span class="hud-label">confusion matrix</span>
+                <div class="matrix__grid">
+                  <span class="matrix__corner"></span><span class="matrix__h">pred. FP</span><span class="matrix__h">pred. planet</span>
+                  <span class="matrix__h">true FP</span><span class="matrix__c" id="m00">0</span><span class="matrix__c" id="m01">0</span>
+                  <span class="matrix__h">true planet</span><span class="matrix__c" id="m10">0</span><span class="matrix__c" id="m11">0</span>
+                </div>
+              </div>
+              <ul class="downloads" id="downloads"></ul>
+            </div>
+            <div class="results__grid results__grid--compare" id="results-compare" hidden>
+              <ol class="ranking" id="ranking"></ol>
+            </div>
+          </div>
+          <div class="map" id="map" hidden aria-hidden="true">
+            <p class="hud-label map__note" id="map-note"></p>
+            <div class="zoom" role="group" aria-label="Zoom">
+              <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+              <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+            </div>
+            <ul class="legend">
+              <li><i style="--c:#c8ff3d"></i>candidate · habitable</li>
+              <li><i style="--c:#ff3b4e"></i>candidate</li>
+              <li><i style="--c:#f2f0ec"></i>confirmed · habitable</li>
+              <li><i style="--c:#6e6a64"></i>confirmed</li>
+            </ul>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TEAM ================= -->
+    <section class="team" id="team" aria-labelledby="team-title">
+      <div class="wrap team__grid">
+        <div class="team__copy">
+          <h2 class="section-title" id="team-title" data-split><span class="line"><span>Six students.</span></span> <span class="line"><span>One question.</span></span></h2>
+          <ul class="team__list">
+            <li>Ayaz Büyükterzi</li><li>Ömer Akhan</li><li>Barış Canbolat</li><li>Rüzgar Kuşaklı</li><li>Orhan Eren Şapcı</li><li>Ata Orkun Coşkun</li>
+          </ul>
+          <a class="btn btn--ghost" href="https://github.com/Ayz345/Vespera" data-magnetic>Source on GitHub</a>
+        </div>
+        <figure class="team__photo" data-reveal>
+          <span class="team__corner team__corner--tl" aria-hidden="true"></span><span class="team__corner team__corner--br" aria-hidden="true"></span>
+          <img src="{{ url_for('static', filename='images/team_photo.jpg') }}" width="1600" height="739" alt="The six members of Team Vespera in front of a physics classroom wall" loading="lazy">
+          <figcaption class="hud-label">rec · team vespera · 2025</figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__word" id="footer-word" aria-hidden="true">VESPERA</div>
+    <div class="wrap footer__credits">
+      <div>
+        <p class="hud-label">Data</p>
+        <p>This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with the National Aeronautics and Space Administration under the Exoplanet Exploration Program.</p>
+        <p class="footer__refs">Kepler Objects of Interest cumulative table, <a href="https://doi.org/10.26133/NEA4">doi:10.26133/NEA4</a> · K2 Planets and Candidates table, <a href="https://doi.org/10.26133/NEA19">doi:10.26133/NEA19</a> · <a href="https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=TOI">TESS Objects of Interest table</a> · Christiansen et al. 2025, <a href="https://doi.org/10.3847/PSJ/ade3c2">PSJ, doi:10.3847/PSJ/ade3c2</a>.</p>
+      </div>
+      <div>
+        <p class="hud-label">Project</p>
+        <p>Vespera is a student project built for the NASA Space Apps Challenge 2025. It is not affiliated with, operated by or endorsed by NASA, Caltech or IPAC. Kepler, K2 and TESS are NASA missions; their names are used to identify the data.</p>
+        <p class="footer__refs">Source: <a href="https://github.com/Ayz345/Vespera">github.com/Ayz345/Vespera</a> · Predictions are model output, not confirmed discoveries.</p>
+      </div>
+    </div>
+    <div class="wrap footer__row">
+      <p class="hud-label">Ayaz Büyükterzi · Ömer Akhan · Barış Canbolat · Rüzgar Kuşaklı · Orhan Eren Şapcı · Ata Orkun Coşkun</p>
+      <p class="hud-label">2025</p>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
