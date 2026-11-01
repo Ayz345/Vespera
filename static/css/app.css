@@ -154,6 +154,20 @@ main, .footer, .nav { position: relative; z-index: 2; }
 @media (max-width: 900px) {
   .hero__title { font-size: clamp(3rem, 14vw, 5rem); }
   .hero__hint { display: none; }
+  .hero__copy { padding: 1.2rem 1rem 1.4rem; margin-left: -1rem; width: calc(100% + 2rem); background: linear-gradient(90deg, rgba(7,7,7,0.82) 0%, rgba(7,7,7,0.7) 70%, rgba(7,7,7,0) 100%); }
+  .hero__lede { color: var(--ink); }
+  .scene + .scene { margin-top: 0; }
+  .console__stage, .results-scene .scene__stage { min-height: 0; }
+  .console__top { position: static; width: auto; margin-bottom: 1.5rem; }
+  .console__grid { margin-top: 0; }
+  .aperture { width: min(72vw, 320px); }
+  .launch__run { width: min(72vw, 320px); }
+  .results { min-height: 0; }
+  .results__hud { width: 100%; }
+  .results .map { margin-top: 1rem; min-height: 78vh; flex-direction: column; flex-wrap: nowrap; justify-content: flex-end; align-items: flex-start; gap: 0.8rem; }
+  .map__note { order: 2; }
+  .map .zoom { order: 1; }
+  .map .legend { order: 3; }
 }
 
 /* ---------- Method ---------- */
