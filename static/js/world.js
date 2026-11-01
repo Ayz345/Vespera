@@ -184,7 +184,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
   /* ----- Camera targets ----- */
   const cam = { pos: new THREE.Vector3(0.6, 0.5, 8.6), look: new THREE.Vector3(0, 0.2, 0), fov: 42 };
   const target = { pos: cam.pos.clone(), look: cam.look.clone(), fov: 42 };
-  let section = 'hero', progress = 0, dim = 0, dark = 0, orbitT = 0, orbitTime = 0;
+  let section = 'hero', progress = 0, dim = 0, dark = 0, orbitT = 0, orbitTime = 0, starVis = 1;
 
   // Camera keyframes. Each section's last key equals the next section's first key,
   // so the camera never moves on its own between pinned scenes.
@@ -357,8 +357,12 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     const time = clock.getElapsedTime();
     const showRes = !!resultPts && (section === 'results' || (section === 'team' && progress < 0.4));
     resultGroup.visible = showRes;
-    const inResults = section === 'results' && !!resultPts;
-    sun.visible = corona.visible = !inResults;
+    // The star fades out when the results take over and never pops back after them
+    const starTarget = (section === 'results' || (section === 'team' && resultPts)) ? 0 : 1;
+    starVis += (starTarget - starVis) * 0.08;
+    sun.visible = corona.visible = starVis > 0.01;
+    sun.scale.setScalar(Math.max(0.001, starVis));
+    corona.scale.setScalar(SUN_R * 4.4 * starVis);
     origin.visible = axis.visible = showRes;
     if (showRes) { originRing.lookAt(camera.position); ticks.forEach((g) => g.lookAt(camera.position)); }
     resultMat.opacity = section === 'results' ? 1 : section === 'team' ? Math.max(0, 1 - progress / 0.35) : 0;
@@ -450,7 +454,7 @@ export function createWorld(canvas, { reducedMotion = false, onSweep = () => {} 
     orbitPath.scale.setScalar(au * AU);
     earth.position.set(Math.cos(-0.7) * au * AU, 0, Math.sin(-0.7) * au * AU);
 
-    corona.material.opacity = (0.8 - dim * 0.4) * (1 - dark);
+    corona.material.opacity = (0.8 - dim * 0.4) * (1 - dark) * starVis;
     sunMat.uniforms.uDark.value = dark;
     composer.render();
   }
