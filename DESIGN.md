@@ -1,7 +1,7 @@
 # Vespera design notes
 
 One page, one night sky. The site is a scroll-driven story that ends in the tool. No build step: ES modules
-served by Flask, GSAP + ScrollTrigger from cdnjs, Three.js from jsDelivr through an import map.
+served by Flask, GSAP + ScrollTrigger from cdnjs, Three.js from jsDelivr through an import map. 
 
 ## Files
 
